@@ -1,0 +1,65 @@
+/* Densidade menor em cards/lista */
+.card-dense .card-header { padding: .5rem .75rem; }
+.card-dense .card-body   { padding: .75rem; }
+
+/* Lista mais compacta */
+.list-dense .list-group-item { padding: .5rem .75rem; }
+
+/* Item selecionado: cinza claro (neutro) */
+.item-menu.active {
+  background-color: var(--bs-gray-200) !important;
+  border-color: var(--bs-gray-300) !important;
+  color: var(--bs-body-color) !important;
+}
+
+/* Metadados “corretora • usuário” com quebra graciosa */
+.meta { display:flex; flex-wrap:wrap; align-items:center; gap:.25rem; }
+.meta > * + *::before {
+  content: "•"; margin: 0 .25rem; color: var(--bs-secondary-color);
+}
+
+/* Ícones grandes sem inline style */
+.icon-lg  { font-size: 1.5rem; }
+.icon-xl  { font-size: 2rem; }
+
+/* Barra da seção (título + upload) */
+.files-toolbar {
+  padding: .5rem 0;
+  border-bottom: 1px solid var(--bs-border-color);
+  margin-bottom: .75rem;
+}
+
+/* Tile de arquivo: leve, sem “cara de card” */
+.file-tile {
+  background: var(--bs-body-bg);
+  border: 1px solid var(--bs-border-color);
+  border-radius: .5rem;
+  padding: .75rem;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: .5rem;
+  transition: box-shadow .12s ease;
+}
+.file-tile:hover { box-shadow: 0 .125rem .75rem rgba(0,0,0,.06); }
+
+.file-title { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.file-meta  { font-size: .8125rem; color: var(--bs-secondary-color); }
+
+/* Ações mais compactas */
+.file-actions .btn { padding: .25rem .5rem; line-height: 1.1; }
+
+/* Estado “processando” minimalista */
+.file-processing {
+  background: var(--bs-warning-bg-subtle);
+  border: 1px solid var(--bs-warning-border-subtle);
+  color: var(--bs-warning-text-emphasis);
+  padding: .375rem .5rem;
+  border-radius: .375rem;
+  display: inline-flex;
+  align-items: center;
+  gap: .5rem;
+}
+
+/* Ícones sem inline-style */
+.icon-lg { font-size: 1.25rem; }
