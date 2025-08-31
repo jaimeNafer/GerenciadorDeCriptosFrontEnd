@@ -1,0 +1,382 @@
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  width: 90%;
+  max-width: 600px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid #e5e7eb;
+
+  h3 {
+    margin: 0;
+    color: #1f2937;
+    font-size: 1.25rem;
+    font-weight: 600;
+  }
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #6b7280;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s;
+
+  &:hover:not(:disabled) {
+    background-color: #f3f4f6;
+    color: #374151;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.upload-content {
+  padding: 24px;
+}
+
+.file-drop-area {
+  border: 2px dashed #d1d5db;
+  border-radius: 8px;
+  padding: 40px 20px;
+  text-align: center;
+  transition: all 0.3s ease;
+  background-color: #fafafa;
+  margin-bottom: 20px;
+
+  &.drag-over {
+    border-color: #3b82f6;
+    background-color: #eff6ff;
+  }
+
+  &.has-file {
+    border-color: #10b981;
+    background-color: #f0fdf4;
+    padding: 20px;
+  }
+
+  &.has-error {
+    border-color: #ef4444;
+    background-color: #fef2f2;
+  }
+}
+
+.drop-message {
+  .upload-icon {
+    color: #6b7280;
+    margin-bottom: 16px;
+
+    svg {
+      display: block;
+      margin: 0 auto;
+    }
+  }
+
+  .primary-text {
+    font-size: 1.125rem;
+    font-weight: 500;
+    color: #374151;
+    margin: 0 0 8px 0;
+  }
+
+  .secondary-text {
+    color: #6b7280;
+    margin: 0 0 16px 0;
+  }
+
+  .file-info {
+    font-size: 0.875rem;
+    color: #6b7280;
+    margin: 12px 0 0 0;
+  }
+}
+
+.file-select-btn {
+  display: inline-block;
+  padding: 10px 20px;
+  background-color: #3b82f6;
+  color: white;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.2s;
+
+  &:hover {
+    background-color: #2563eb;
+  }
+}
+
+.selected-file {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  background-color: white;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+
+  .file-icon {
+    color: #10b981;
+    flex-shrink: 0;
+  }
+
+  .file-details {
+    flex: 1;
+    min-width: 0;
+
+    .file-name {
+      font-weight: 500;
+      color: #374151;
+      margin: 0 0 4px 0;
+      word-break: break-all;
+    }
+
+    .file-size {
+      font-size: 0.875rem;
+      color: #6b7280;
+      margin: 0;
+    }
+  }
+
+  .remove-file-btn {
+    background: none;
+    border: none;
+    color: #ef4444;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    transition: all 0.2s;
+    flex-shrink: 0;
+
+    &:hover:not(:disabled) {
+      background-color: #fef2f2;
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
+}
+
+.validation-errors {
+  margin-bottom: 20px;
+
+  .error-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background-color: #fef2f2;
+    border: 1px solid #fecaca;
+    border-radius: 6px;
+    color: #dc2626;
+    font-size: 0.875rem;
+    margin-bottom: 8px;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+
+    svg {
+      flex-shrink: 0;
+    }
+  }
+}
+
+.form-group {
+  margin-bottom: 20px;
+
+  label {
+    display: block;
+    margin-bottom: 6px;
+    color: #374151;
+    font-weight: 500;
+    font-size: 0.875rem;
+  }
+}
+
+.form-control {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  transition: all 0.2s;
+  box-sizing: border-box;
+  font-family: inherit;
+  resize: vertical;
+
+  &:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+
+  &:disabled {
+    background-color: #f9fafb;
+    color: #6b7280;
+    cursor: not-allowed;
+  }
+
+  &::placeholder {
+    color: #9ca3af;
+  }
+}
+
+.upload-progress {
+  margin-bottom: 20px;
+
+  .progress-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    font-size: 0.875rem;
+    color: #374151;
+  }
+
+  .progress-bar {
+    width: 100%;
+    height: 8px;
+    background-color: #e5e7eb;
+    border-radius: 4px;
+    overflow: hidden;
+
+    .progress-fill {
+      height: 100%;
+      background-color: #3b82f6;
+      transition: width 0.3s ease;
+    }
+  }
+}
+
+.form-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 32px;
+  padding-top: 20px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  &.btn-secondary {
+    background-color: #f3f4f6;
+    color: #374151;
+    border: 1px solid #d1d5db;
+
+    &:hover:not(:disabled) {
+      background-color: #e5e7eb;
+    }
+  }
+
+  &.btn-primary {
+    background-color: #3b82f6;
+    color: white;
+
+    &:hover:not(:disabled) {
+      background-color: #2563eb;
+    }
+  }
+}
+
+.loading-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid transparent;
+  border-top: 2px solid currentColor;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@media (max-width: 640px) {
+  .modal-content {
+    width: 95%;
+    margin: 20px;
+  }
+
+  .modal-header,
+  .upload-content {
+    padding: 16px;
+  }
+
+  .file-drop-area {
+    padding: 30px 15px;
+  }
+
+  .form-actions {
+    flex-direction: column;
+
+    .btn {
+      width: 100%;
+      justify-content: center;
+    }
+  }
+
+  .selected-file {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+
+    .file-details {
+      width: 100%;
+    }
+
+    .remove-file-btn {
+      align-self: flex-end;
+    }
+  }
+}

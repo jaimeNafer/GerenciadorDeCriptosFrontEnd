@@ -1,0 +1,39 @@
+<div class="app-container">
+  <!-- Menu Lateral -->
+  <nav class="sidebar">
+    <div class="sidebar-header">
+      <h2>Gerenciador de Cripto</h2>
+    </div>
+    <ul class="nav-menu">
+      <li>
+        <a routerLink="/home" routerLinkActive="active">
+          <i class="icon">🏠</i>
+          <span>Home</span>
+        </a>
+      </li>
+      <li>
+        <a routerLink="/operacoes" routerLinkActive="active">
+          <i class="icon">💱</i>
+          <span>Operações</span>
+        </a>
+      </li>
+      <li>
+        <a routerLink="/ativos" routerLinkActive="active">
+          <i class="icon">📊</i>
+          <span>Ativos</span>
+        </a>
+      </li>
+      <li>
+        <a routerLink="/importacao" routerLinkActive="active">
+          <i class="icon">📥</i>
+          <span>Importação</span>
+        </a>
+      </li>
+    </ul>
+  </nav>
+
+  <!-- Conteúdo Principal -->
+  <main class="main-content">
+    <router-outlet></router-outlet>
+  </main>
+</div>
