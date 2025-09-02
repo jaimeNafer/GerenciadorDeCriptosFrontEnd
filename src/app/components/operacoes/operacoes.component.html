@@ -1,0 +1,263 @@
+<div class="container-fluid py-3">
+  <!-- Toolbar -->
+  <div class="mb-3">
+    <h1 class="h4 mb-1">
+      <i class="bi bi-arrow-left-right me-2"></i>
+      Operações
+    </h1>
+    <p class="text-body-secondary mb-0">Consulte o histórico de suas operações de compra e venda de criptomoedas</p>
+  </div>
+
+  <!-- Filtros (accordion mais enxuto) -->
+  <div class="accordion accordion-flush mb-3" id="filtersAccordion">
+    <div class="accordion-item">
+      <h2 class="accordion-header">
+        <button class="accordion-button collapsed py-2" type="button"
+                data-bs-toggle="collapse" data-bs-target="#filtersCollapse"
+                aria-expanded="false" aria-controls="filtersCollapse">
+          <i class="bi bi-funnel me-2"></i> Filtros de Busca
+        </button>
+      </h2>
+      <div id="filtersCollapse" class="accordion-collapse collapse" data-bs-parent="#filtersAccordion">
+        <div class="accordion-body">
+          <form [formGroup]="filterForm">
+            <div class="row g-2 mb-2">
+              <div class="col-md-3">
+                <label class="form-label small mb-1">Carteira</label>
+                <select formControlName="carteiraId" class="form-select form-select-sm">
+                  <option value="">Todas as carteiras</option>
+                  <option *ngFor="let carteira of carteiras" [value]="carteira.id">{{ carteira.nome }}</option>
+                </select>
+              </div>
+
+              <div class="col-md-3">
+                <label class="form-label small mb-1">Criptomoeda</label>
+                <input type="text" formControlName="criptomoeda" class="form-control form-control-sm" placeholder="Buscar criptomoeda...">
+              </div>
+
+              <div class="col-md-3">
+                <label class="form-label small mb-1">Tipo</label>
+                <select formControlName="tipoOperacao" class="form-select form-select-sm">
+                  <option value="">Todos os tipos</option>
+                  <option [value]="TipoOperacao.COMPRA">Compra</option>
+                  <option [value]="TipoOperacao.VENDA">Venda</option>
+                  <option [value]="TipoOperacao.TRANSFERENCIA_ENTRADA">Transferência Entrada</option>
+                  <option [value]="TipoOperacao.TRANSFERENCIA_SAIDA">Transferência Saída</option>
+                  <option [value]="TipoOperacao.STAKING">Staking</option>
+                  <option [value]="TipoOperacao.REWARD">Reward</option>
+                  <option [value]="TipoOperacao.AIRDROP">Airdrop</option>
+                </select>
+              </div>
+
+              <div class="col-md-3">
+                <label class="form-label small mb-1">Status</label>
+                <select formControlName="status" class="form-select form-select-sm">
+                  <option value="">Todos os status</option>
+                  <option [value]="StatusOperacao.PENDENTE">Pendente</option>
+                  <option [value]="StatusOperacao.CONFIRMADA">Confirmada</option>
+                  <option [value]="StatusOperacao.CANCELADA">Cancelada</option>
+                  <option [value]="StatusOperacao.ERRO">Erro</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="row g-2">
+              <div class="col-md-4">
+                <label class="form-label small mb-1">Data Início</label>
+                <input type="date" formControlName="dataInicio" class="form-control form-control-sm">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label small mb-1">Data Fim</label>
+                <input type="date" formControlName="dataFim" class="form-control form-select-sm form-control-sm">
+              </div>
+              <div class="col-md-4 d-flex align-items-end gap-2">
+                <button type="button" class="btn btn-primary btn-sm" (click)="applyFilters(filterForm.value)">
+                  <i class="bi bi-check2 me-1"></i> Aplicar
+                </button>
+                <button type="button" class="btn btn-outline-secondary btn-sm" (click)="clearFilters()">
+                  <i class="bi bi-x-circle me-1"></i> Limpar
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Card principal -->
+  <div class="card shadow-sm card-dense">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <h5 class="mb-0">Histórico de Operações</h5>
+      <small class="text-body-secondary">{{ totalItems }} operações encontradas</small>
+    </div>
+
+    <!-- KPIs compactos (sempre que houver dados) -->
+    <div class="kpis" *ngIf="!loading && historicoMensal">
+      <div class="row text-center g-2">
+        <div class="col-6 col-md-3 kpi">
+          <div class="value text-dark">{{ formatCurrency(historicoMensal.periodoTotal.totalGeral) }}</div>
+          <div class="label">Volume Total</div>
+        </div>
+        <div class="col-6 col-md-3 kpi">
+          <div class="value" [class.text-success]="historicoMensal.periodoTotal.saldoGeral >= 0"
+               [class.text-danger]="historicoMensal.periodoTotal.saldoGeral < 0">
+            {{ formatCurrency(historicoMensal.periodoTotal.saldoGeral) }}
+          </div>
+          <div class="label">Saldo Geral</div>
+        </div>
+        <div class="col-6 col-md-3 kpi">
+          <div class="value text-secondary">{{ formatDate(historicoMensal.periodoTotal.dataInicio) }}</div>
+          <div class="label">Data Início</div>
+        </div>
+        <div class="col-6 col-md-3 kpi">
+          <div class="value text-secondary">{{ formatDate(historicoMensal.periodoTotal.dataFim) }}</div>
+          <div class="label">Data Fim</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card-body p-0" *ngIf="!loading; else loadingTemplate">
+      <div *ngIf="operacoesPorMes.length > 0; else emptyState">
+
+        <!-- Tabela -->
+        <div class="table-responsive">
+          <table class="table table-hover table-compact mb-0 align-middle">
+            <thead class="table-dark sticky-top">
+              <tr>
+                <th scope="col" class="py-2">Data</th>
+                <th scope="col" class="py-2">Operação</th>
+                <th scope="col" class="py-2">Moeda Entrada</th>
+                <th scope="col" class="py-2">Qtd Entrada</th>
+                <th scope="col" class="py-2">Moeda Saída</th>
+                <th scope="col" class="py-2">Qtd Saída</th>
+                <th scope="col" class="py-2">Valor (BRL)</th>
+                <th scope="col" class="py-2">Lucro/Prejuízo</th>
+              </tr>
+            </thead>
+            <tbody>
+              <ng-container *ngFor="let mesDados of operacoesPorMes; let i = index">
+                <!-- Divisor do mês (mais clean) -->
+                <tr class="month-divider">
+                  <td colspan="8">
+                    <div class="month-meta">
+                      <strong class="me-1">{{ mesDados.consolidado.mes }}</strong>
+                      <span class="badge text-bg-light">{{ mesDados.consolidado.totalOperacoes }} operações</span>
+                      <span class="small">Compras: <strong>{{ mesDados.consolidado.totalCompras }}</strong></span>
+                      <span class="small">Vendas: <strong>{{ mesDados.consolidado.totalVendas }}</strong></span>
+                      <span class="small">Volume: <strong class="font-monospace">{{ formatCurrency(mesDados.consolidado.valorTotalCompras + mesDados.consolidado.valorTotalVendas) }}</strong></span>
+                      <span class="small">Saldo:
+                        <strong class="font-monospace"
+                          [class.text-success]="mesDados.consolidado.saldoMensal >= 0"
+                          [class.text-danger]="mesDados.consolidado.saldoMensal < 0">
+                          {{ formatCurrency(mesDados.consolidado.saldoMensal) }}
+                        </strong>
+                      </span>
+                    </div>
+                  </td>
+                </tr>
+
+                <!-- Linhas do mês -->
+                <tr *ngFor="let operacao of mesDados.operacoes" class="operation-row">
+                  <td class="py-1">
+                    <small class="text-body-secondary">{{ formatDate(operacao.dataOperacao) }}</small>
+                  </td>
+                  <td class="py-1">
+                    <span class="badge badge-sm tipo-badge"
+                          [ngClass]="{
+                            'compra': operacao.tipoOperacao === TipoOperacao.COMPRA,
+                            'venda':  operacao.tipoOperacao === TipoOperacao.VENDA,
+                            'transfer-in':  operacao.tipoOperacao === TipoOperacao.TRANSFERENCIA_ENTRADA,
+                            'transfer-out': operacao.tipoOperacao === TipoOperacao.TRANSFERENCIA_SAIDA,
+                            'staking': operacao.tipoOperacao === TipoOperacao.STAKING,
+                            'reward':  operacao.tipoOperacao === TipoOperacao.REWARD,
+                            'airdrop': operacao.tipoOperacao === TipoOperacao.AIRDROP
+                          }">
+                      {{ operacao.tipoOperacao }}
+                    </span>
+                  </td>
+                  <td class="py-1">
+                    <div *ngIf="operacao.tipoOperacao === TipoOperacao.COMPRA">
+                      <div class="fw-medium small">BRL</div>
+                      <small class="text-body-secondary">Real</small>
+                    </div>
+                    <div *ngIf="operacao.tipoOperacao === TipoOperacao.VENDA">
+                      <div class="fw-medium small">{{ operacao.criptomoeda }}</div>
+                      <small class="text-body-secondary">{{ operacao.simbolo }}</small>
+                    </div>
+                    <span *ngIf="operacao.tipoOperacao !== TipoOperacao.COMPRA && operacao.tipoOperacao !== TipoOperacao.VENDA">-</span>
+                  </td>
+                  <td class="py-1">
+                    <span *ngIf="operacao.tipoOperacao === TipoOperacao.COMPRA" class="font-monospace small">{{ formatCurrency(operacao.valorTotal) }}</span>
+                    <span *ngIf="operacao.tipoOperacao === TipoOperacao.VENDA"  class="font-monospace small">{{ formatNumber(operacao.quantidade) }}</span>
+                    <span *ngIf="operacao.tipoOperacao !== TipoOperacao.COMPRA && operacao.tipoOperacao !== TipoOperacao.VENDA">-</span>
+                  </td>
+                  <td class="py-1">
+                    <div *ngIf="operacao.tipoOperacao === TipoOperacao.COMPRA">
+                      <div class="fw-medium small">{{ operacao.criptomoeda }}</div>
+                      <small class="text-body-secondary">{{ operacao.simbolo }}</small>
+                    </div>
+                    <div *ngIf="operacao.tipoOperacao === TipoOperacao.VENDA">
+                      <div class="fw-medium small">BRL</div>
+                      <small class="text-body-secondary">Real</small>
+                    </div>
+                    <span *ngIf="operacao.tipoOperacao !== TipoOperacao.COMPRA && operacao.tipoOperacao !== TipoOperacao.VENDA">-</span>
+                  </td>
+                  <td class="py-1">
+                    <span *ngIf="operacao.tipoOperacao === TipoOperacao.COMPRA" class="font-monospace small">{{ formatNumber(operacao.quantidade) }}</span>
+                    <span *ngIf="operacao.tipoOperacao === TipoOperacao.VENDA"  class="font-monospace small">{{ formatCurrency(operacao.valorTotal) }}</span>
+                    <span *ngIf="operacao.tipoOperacao !== TipoOperacao.COMPRA && operacao.tipoOperacao !== TipoOperacao.VENDA">-</span>
+                  </td>
+                  <td class="py-1">
+                    <strong class="font-monospace small">{{ formatCurrency(operacao.valorTotal) }}</strong>
+                  </td>
+                  <td class="py-1">
+                    <span class="text-body-secondary small">-</span>
+                  </td>
+                </tr>
+              </ng-container>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Empty -->
+      <ng-template #emptyState>
+        <div class="text-center py-5">
+          <i class="bi bi-inbox text-muted mb-3 icon-xl"></i>
+          <h5 class="text-muted">Nenhuma operação encontrada</h5>
+          <p class="text-body-secondary mb-0">Ajuste os filtros de busca para encontrar suas operações.</p>
+        </div>
+      </ng-template>
+    </div>
+
+    <!-- Loading -->
+    <ng-template #loadingTemplate>
+      <div class="card-body text-center py-5">
+        <div class="spinner-border text-primary mb-3" role="status"><span class="visually-hidden">Carregando...</span></div>
+        <p class="text-body-secondary mb-0">Carregando operações...</p>
+      </div>
+    </ng-template>
+
+    <!-- Paginação -->
+    <div class="card-footer bg-light" *ngIf="totalPages > 1">
+      <nav aria-label="Paginação das operações">
+        <ul class="pagination pagination-sm justify-content-center mb-0">
+          <li class="page-item" [class.disabled]="currentPage === 1">
+            <button class="page-link" (click)="changePage(currentPage - 1)" [disabled]="currentPage === 1">
+              <i class="bi bi-chevron-left"></i>
+            </button>
+          </li>
+          <li class="page-item active">
+            <span class="page-link">Página {{ currentPage }} de {{ totalPages }}</span>
+          </li>
+          <li class="page-item" [class.disabled]="currentPage === totalPages">
+            <button class="page-link" (click)="changePage(currentPage + 1)" [disabled]="currentPage === totalPages">
+              <i class="bi bi-chevron-right"></i>
+            </button>
+          </li>
+        </ul>
+      </nav>
+    </div>
+  </div>
+</div>
