@@ -1,8 +1,8 @@
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { Component, EventEmitter, Input, Output, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ArquivoService } from '../../services/arquivo.service';
-import { Arquivo, UploadArquivoRequest } from '../../models/arquivo.model';
+import { Arquivo, StatusArquivo } from '../../models/arquivo.model';
 
 @Component({
   selector: 'app-file-upload',
@@ -13,22 +13,25 @@ import { Arquivo, UploadArquivoRequest } from '../../models/arquivo.model';
 })
 export class FileUploadComponent {
   @Input() carteiraId: number | null = null;
-  @Input() isVisible: boolean = false;
-  @Output() onUploadComplete = new EventEmitter<Arquivo>();
-  @Output() onCancel = new EventEmitter<void>();
+  @Input() isVisible = false;
+  @Output() uploadComplete = new EventEmitter<Arquivo>();
+  @Output() cancelled = new EventEmitter<void>();
 
   selectedFile: File | null = null;
-  observacoes: string = '';
+  observacoes = '';
   isUploading = false;
   uploadProgress = 0;
   dragOver = false;
   validationErrors: string[] = [];
 
-  constructor(private arquivoService: ArquivoService) {}
+  private readonly arquivoService = inject(ArquivoService);
 
-  onFileSelected(event: any): void {
-    const file = event.target.files[0];
-    this.handleFileSelection(file);
+  onFileSelected(event: Event): void {
+    const target = event.target as HTMLInputElement;
+    const file = target.files?.[0];
+    if (file) {
+      this.handleFileSelection(file);
+    }
   }
 
   onDragOver(event: DragEvent): void {
@@ -79,12 +82,6 @@ export class FileUploadComponent {
     this.isUploading = true;
     this.uploadProgress = 0;
 
-    const uploadRequest: UploadArquivoRequest = {
-      arquivo: this.selectedFile,
-      carteiraId: this.carteiraId,
-      observacoes: this.observacoes.trim() || undefined
-    };
-
     // Simulação de upload para desenvolvimento
     this.simulateUpload();
 
@@ -95,7 +92,7 @@ export class FileUploadComponent {
     //       this.uploadProgress = event.message;
     //     } else if (event.status === 'complete') {
     //       const arquivo = event.body as Arquivo;
-    //       this.onUploadComplete.emit(arquivo);
+    //       this.uploadComplete.emit(arquivo);
     //       this.resetForm();
     //     }
     //   },
@@ -121,12 +118,12 @@ export class FileUploadComponent {
           carteiraId: this.carteiraId!,
           dataUpload: new Date(),
           tamanho: this.selectedFile!.size,
-          status: 'PENDENTE' as any,
+          status: StatusArquivo.PENDENTE,
           observacoes: this.observacoes.trim() || undefined
         };
         
         setTimeout(() => {
-          this.onUploadComplete.emit(novoArquivo);
+          this.uploadComplete.emit(novoArquivo);
           this.resetForm();
         }, 500);
       }
@@ -140,7 +137,7 @@ export class FileUploadComponent {
     }
     
     this.resetForm();
-    this.onCancel.emit();
+    this.cancelled.emit();
   }
 
   private resetForm(): void {

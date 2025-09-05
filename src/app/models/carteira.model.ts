@@ -1,19 +1,34 @@
+export interface Corretora {
+  idCorretora: number;
+  nome: string;
+}
+
 export interface Carteira {
+  idCarteira: number;
+  nome: string;
+  corretora?: Corretora;
+  corretoraId?: number; // Mantido para compatibilidade
+  dataCriacao?: Date;
+  excluido?: boolean;
+}
+
+// Interface para compatibilidade com código existente
+export interface CarteiraLegacy {
   id?: number;
   nome: string;
-  usuarioId: number;
   corretoraId: number;
   dataCriacao?: Date;
-  ativa?: boolean;
+  excluido?: boolean;
 }
 
 export interface CreateCarteiraRequest {
   nome: string;
-  usuarioId: number;
-  corretoraId: number;
+  corretora: {
+    idCorretora: number;
+  };
 }
 
 export interface UpdateCarteiraRequest {
   nome?: string;
-  ativa?: boolean;
+  excluido?: boolean;
 }

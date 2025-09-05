@@ -7,7 +7,7 @@ import { CarteiraService } from '../../services/carteira.service';
 import { ArquivoService } from '../../services/arquivo.service';
 import { Carteira } from '../../models/carteira.model';
 import { Arquivo, StatusArquivo } from '../../models/arquivo.model';
-import { Corretora, Usuario } from '../../models/corretora.model';
+import { Corretora } from '../../models/corretora.model';
 
 @Component({
   selector: 'app-importacao',
@@ -22,7 +22,7 @@ export class ImportacaoComponent implements OnInit {
   carteiras: Carteira[] = [];
   arquivos: Arquivo[] = [];
   corretoras: Corretora[] = [];
-  usuarios: Usuario[] = [];
+
   
   selectedCarteira: Carteira | null = null;
   carteiraParaEdicao: Carteira | null = null;
@@ -35,55 +35,59 @@ export class ImportacaoComponent implements OnInit {
   
   searchTerm = '';
   
-  constructor(private readonly carteiraService: CarteiraService, private readonly arquivoService: ArquivoService) {}
+  // Sistema de alertas
+  alertMessage = '';
+  alertType: 'success' | 'danger' | 'warning' | 'info' = 'info';
+  showAlert = false;
+  private readonly carteiraService: CarteiraService;
+  private readonly arquivoService: ArquivoService;
+  
+  constructor() {
+    this.carteiraService = inject(CarteiraService);
+    this.arquivoService = inject(ArquivoService);
+  }
   
   ngOnInit(): void {
     this.loadCarteiras();
     this.loadCorretoras();
-    this.loadUsuarios();
+
   }
   
   loadCarteiras(): void {
     this.isLoadingCarteiras = true;
     
-    // Usando dados mock por enquanto
-    setTimeout(() => {
-      this.carteiras = this.carteiraService.getMockCarteiras();
-      this.isLoadingCarteiras = false;
-      
-      // Selecionar primeira carteira se existir
-      if (this.carteiras.length > 0 && !this.selectedCarteira) {
-        this.selectCarteira(this.carteiras[0]);
+    // Usando API real do backend
+    this.carteiraService.getCarteiras().subscribe({
+      next: (carteiras) => {
+        this.carteiras = carteiras;
+        this.isLoadingCarteiras = false;
+        if (carteiras.length > 0 && !this.selectedCarteira) {
+          this.selectCarteira(carteiras[0]);
+        }
+      },
+      error: (error) => {
+        console.error('Erro ao carregar carteiras:', error);
+        this.isLoadingCarteiras = false;
+        
+        // Fallback para dados mock em caso de erro
+        console.log('Usando dados mock como fallback...');
+        this.carteiras = this.carteiraService.getMockCarteiras();
+        if (this.carteiras.length > 0 && !this.selectedCarteira) {
+          this.selectCarteira(this.carteiras[0]);
+        }
       }
-    }, 500);
-    
-    // Para usar API real, descomente:
-    // this.carteiraService.getCarteiras().subscribe({
-    //   next: (carteiras) => {
-    //     this.carteiras = carteiras;
-    //     this.isLoadingCarteiras = false;
-    //     if (carteiras.length > 0 && !this.selectedCarteira) {
-    //       this.selectCarteira(carteiras[0]);
-    //     }
-    //   },
-    //   error: (error) => {
-    //     console.error('Erro ao carregar carteiras:', error);
-    //     this.isLoadingCarteiras = false;
-    //   }
-    // });
+    });
   }
   
   loadCorretoras(): void {
     this.corretoras = this.carteiraService.getMockCorretoras();
   }
   
-  loadUsuarios(): void {
-    this.usuarios = this.carteiraService.getMockUsuarios();
-  }
+
   
   selectCarteira(carteira: Carteira): void {
     this.selectedCarteira = carteira;
-    this.loadArquivosByCarteira(carteira.id!);
+    this.loadArquivosByCarteira(carteira.idCarteira);
   }
   
   loadArquivosByCarteira(carteiraId: number): void {
@@ -119,13 +123,13 @@ export class ImportacaoComponent implements OnInit {
     this.showCarteiraForm = true;
   }
   
-  onCarteiraSaved(carteira: Carteira): void {
+  onCarteiraSaved(carteira: Carteira): void {    
     if (this.carteiraParaEdicao) {
       // Atualizar carteira existente
-      const index = this.carteiras.findIndex(c => c.id === carteira.id);
+      const index = this.carteiras.findIndex(c => c.idCarteira === carteira.idCarteira);
       if (index !== -1) {
         this.carteiras[index] = carteira;
-        if (this.selectedCarteira?.id === carteira.id) {
+        if (this.selectedCarteira?.idCarteira === carteira.idCarteira) {
           this.selectedCarteira = carteira;
         }
       }
@@ -143,16 +147,18 @@ export class ImportacaoComponent implements OnInit {
     this.showCarteiraForm = false;
     this.carteiraParaEdicao = null;
   }
+
+
   
   deletarCarteira(carteira: Carteira): void {
     if (confirm(`Tem certeza que deseja excluir a carteira "${carteira.nome}"?`)) {
       // Simular exclusão
-      this.carteiras = this.carteiras.filter(c => c.id !== carteira.id);
+      this.carteiras = this.carteiras.filter(c => c.idCarteira !== carteira.idCarteira);
       
-      if (this.selectedCarteira?.id === carteira.id) {
+      if (this.selectedCarteira?.idCarteira === carteira.idCarteira) {
         this.selectedCarteira = this.carteiras.length > 0 ? this.carteiras[0] : null;
         if (this.selectedCarteira) {
-          this.loadArquivosByCarteira(this.selectedCarteira.id!);
+          this.loadArquivosByCarteira(this.selectedCarteira.idCarteira);
         } else {
           this.arquivos = [];
         }
@@ -239,20 +245,21 @@ export class ImportacaoComponent implements OnInit {
     const term = this.searchTerm.toLowerCase();
     return this.carteiras.filter(carteira => 
       carteira.nome.toLowerCase().includes(term) ||
-      this.getCorretoraName(carteira.corretoraId).toLowerCase().includes(term) ||
-      this.getUsuarioName(carteira.usuarioId).toLowerCase().includes(term)
+      this.getCorretoraName(carteira).toLowerCase().includes(term)
     );
   }
   
-  getCorretoraName(corretoraId: number): string {
-    const corretora = this.corretoras.find(c => c.id === corretoraId);
-    return corretora ? corretora.nome : 'N/A';
+  getCorretoraName(carteira: Carteira): string {
+    if (carteira.corretora?.nome) {
+      // Retorna apenas o primeiro nome da corretora
+      return carteira.corretora.nome.split(' ')[0];
+    }
+    // Fallback para o método antigo se não houver dados aninhados
+    const corretora = this.corretoras.find(c => c.id === carteira.corretoraId);
+    return corretora ? corretora.nome.split(' ')[0] : 'N/A';
   }
   
-  getUsuarioName(usuarioId: number): string {
-    const usuario = this.usuarios.find(u => u.id === usuarioId);
-    return usuario ? usuario.nome : 'N/A';
-  }
+
   
   getStatusClass(status: StatusArquivo): string {
     switch (status) {
@@ -295,12 +302,31 @@ export class ImportacaoComponent implements OnInit {
   }
   
   formatDate(date: Date): string {
-    return new Intl.DateTimeFormat('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    }).format(new Date(date));
-  }
-}
+     return new Intl.DateTimeFormat('pt-BR', {
+       day: '2-digit',
+       month: '2-digit',
+       year: 'numeric',
+       hour: '2-digit',
+       minute: '2-digit'
+     }).format(new Date(date));
+   }
+ 
+   // Métodos para gerenciar alertas
+   showAlertMessage(message: string, type: 'success' | 'danger' | 'warning' | 'info' = 'info'): void {
+     this.alertMessage = message;
+     this.alertType = type;
+     this.showAlert = true;
+ 
+     // Auto-hide após 5 segundos para alertas de sucesso e info
+     if (type === 'success' || type === 'info') {
+       setTimeout(() => {
+         this.hideAlert();
+       }, 5000);
+     }
+   }
+ 
+   hideAlert(): void {
+     this.showAlert = false;
+     this.alertMessage = '';
+   }
+ }

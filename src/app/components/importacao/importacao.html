@@ -7,6 +7,12 @@
     </div>
   </div>
 
+  <!-- Banner de Alertas -->
+  <div *ngIf="showAlert" class="alert alert-dismissible fade show mb-3" [ngClass]="'alert-' + alertType" role="alert">
+    {{ alertMessage }}
+    <button type="button" class="btn-close" (click)="hideAlert()" aria-label="Fechar"></button>
+  </div>
+
   <div class="row g-3">
     <!-- Sidebar -->
     <aside class="col-12 col-lg-3">
@@ -38,17 +44,17 @@
                 *ngFor="let c of carteirasFiltradas">
               <button type="button"
                       class="list-group-item list-group-item-action w-100 text-start item-menu"
-                      [class.active]="selectedCarteira?.id === c.id"
+                      [class.active]="selectedCarteira?.idCarteira === c.idCarteira"
                       (click)="selectCarteira(c)">
                 <div class="d-flex justify-content-between align-items-start">
                   <div class="flex-grow-1" style="min-width:0">
                     <h6 class="mb-1 text-truncate">{{ c.nome }}</h6>
                     <p class="mb-1 text-body-secondary small meta">
-                      <span>{{ getCorretoraName(c.corretoraId) }}</span>
-                      <span>{{ getUsuarioName(c.usuarioId) }}</span>
+                      <span>{{ getCorretoraName(c) }}</span>
+      
                     </p>
-                    <span class="badge" [ngClass]="c.ativa ? 'text-bg-success' : 'text-bg-secondary'">
-                      {{ c.ativa ? 'Ativa' : 'Inativa' }}
+                    <span class="badge" [ngClass]="!c.excluido ? 'text-bg-success' : 'text-bg-secondary'">
+                      {{ !c.excluido ? 'Ativa' : 'Inativa' }}
                     </span>
                   </div>
                   <div class="btn-group btn-group-sm" role="group" aria-label="Ações da carteira">
@@ -89,7 +95,7 @@
           <div>
             <h2 class="h5 mb-0">{{ selectedCarteira.nome }}</h2>
             <small class="text-body-secondary">
-              {{ getCorretoraName(selectedCarteira.corretoraId) }} • {{ getUsuarioName(selectedCarteira.usuarioId) }}
+              {{ getCorretoraName(selectedCarteira) }}
             </small>
           </div>
           <button type="button" class="btn btn-primary btn-sm d-none d-lg-inline-flex" (click)="openUploadArquivo()">
@@ -168,16 +174,16 @@
   </div>
   
   <app-carteira-form
-    [carteira]="carteiraParaEdicao"
-    [isVisible]="showCarteiraForm"
-    (onSave)="onCarteiraSaved($event)"
-    (onCancel)="onCarteiraFormCanceled()"
-  ></app-carteira-form>
+          [carteira]="carteiraParaEdicao"
+          [isVisible]="showCarteiraForm"
+          (save)="onCarteiraSaved($event)"
+          (cancelled)="onCarteiraFormCanceled()"
+        ></app-carteira-form>
 
   <app-file-upload
-    [carteiraId]="selectedCarteira?.id || null"
+    [carteiraId]="selectedCarteira?.idCarteira || null"
     [isVisible]="showFileUpload"
-    (onUploadComplete)="onUploadComplete($event)"
-    (onCancel)="onUploadCanceled()"
+    (uploadComplete)="onUploadComplete($event)"
+    (cancelled)="onUploadCanceled()"
   ></app-file-upload>
 </div>
