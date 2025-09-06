@@ -255,7 +255,7 @@ export class ImportacaoComponent implements OnInit {
       return carteira.corretora.nome.split(' ')[0];
     }
     // Fallback para o método antigo se não houver dados aninhados
-    const corretora = this.corretoras.find(c => c.id === carteira.corretoraId);
+    const corretora = this.corretoras.find(c => c.idCorretora === carteira.corretoraId);
     return corretora ? corretora.nome.split(' ')[0] : 'N/A';
   }
   

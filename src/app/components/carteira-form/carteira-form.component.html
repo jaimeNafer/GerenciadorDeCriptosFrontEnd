@@ -42,7 +42,7 @@
           [class.error]="corretoraId?.invalid && corretoraId?.touched"
         >
           <option value="">Selecione uma corretora</option>
-          <option *ngFor="let corretora of corretoras" [value]="corretora.id">
+          <option *ngFor="let corretora of corretoras" [value]="corretora.idCorretora">
             {{ corretora.nome }}
           </option>
         </select>

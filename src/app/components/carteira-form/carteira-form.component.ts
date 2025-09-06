@@ -81,14 +81,15 @@ export class CarteiraFormComponent implements OnInit, OnChanges {
   }
 
   private loadCorretoras(): void {
-    // Usando dados mock por enquanto
-    this.corretoras = this.carteiraService.getMockCorretoras();
-
-    // Para usar API real, descomente:
-    // this.carteiraService.getCorretoras().subscribe({
-    //   next: (corretoras) => this.corretoras = corretoras,
-    //   error: (error) => console.error('Erro ao carregar corretoras:', error)
-    // });
+    this.carteiraService.getCorretoras().subscribe({
+      next: (corretoras) => {
+        this.corretoras = corretoras;
+      },
+      error: (error) => {
+        console.error('Erro ao carregar corretoras da API:', error);
+        this.showAlertMessage('Erro ao carregar corretoras. Usando dados de exemplo.', 'warning');
+      }
+    });
   }
 
 
@@ -146,21 +147,7 @@ export class CarteiraFormComponent implements OnInit, OnChanges {
           },
           error: (error) => {
             this.isLoading = false;
-
-            if (error.status === 422) {
-              // Erro de validação - exibir mensagem específica do backend
-              const errorMessage =
-                error.error?.message ||
-                error.error?.error ||
-                'Dados inválidos. Verifique os campos e tente novamente.';
-              this.showAlertMessage(errorMessage, 'warning');
-            } else {
-              // Outros erros - mensagem genérica
-              this.showAlertMessage(
-                'Erro interno do servidor. Tente novamente mais tarde.',
-                'danger'
-              );
-            }
+            this.handleError(error);
           },
         });
       }
@@ -197,6 +184,24 @@ export class CarteiraFormComponent implements OnInit, OnChanges {
   hideAlert(): void {
     this.showAlert = false;
     this.alertMessage = '';
+  }
+
+  private handleError(error: any): void {
+    console.error('Erro na operação:', error);
+    
+    if (error.status === 422) {
+      // Erro de validação
+      this.showAlertMessage('Dados inválidos. Verifique os campos e tente novamente.', 'danger');
+    } else if (error.status === 503) {
+      // Servidor indisponível
+      this.showAlertMessage('Servidor temporariamente indisponível. Tente novamente em alguns minutos.', 'warning');
+    } else if (error.status === 0) {
+      // Erro de conexão
+      this.showAlertMessage('Erro de conexão. Verifique sua internet e tente novamente.', 'danger');
+    } else {
+      // Outros erros
+      this.showAlertMessage('Erro inesperado. Tente novamente mais tarde.', 'danger');
+    }
   }
 
   // Getters para facilitar acesso aos controles do formulário

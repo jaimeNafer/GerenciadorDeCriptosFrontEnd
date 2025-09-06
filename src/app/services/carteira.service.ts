@@ -66,9 +66,9 @@ export class CarteiraService {
     return of(void 0);
   }
 
-  // Obter corretoras (mockado)
+  // Obter corretoras da API
   getCorretoras(): Observable<Corretora[]> {
-    return of(this.getMockCorretoras());
+    return this.http.get<Corretora[]>('http://localhost:8080/v1/corretoras');
   }
 
 
@@ -99,9 +99,9 @@ export class CarteiraService {
 
   getMockCorretoras(): Corretora[] {
     return [
-      { id: 1, nome: 'XP Investimentos', codigo: 'XP', ativa: true },
-      { id: 2, nome: 'Rico', codigo: 'RICO', ativa: true },
-      { id: 3, nome: 'Clear', codigo: 'CLEAR', ativa: true },
+      { idCorretora: 1, nome: 'XP Investimentos', codigo: 'XP', ativa: true },
+      { idCorretora: 2, nome: 'Rico', codigo: 'RICO', ativa: true },
+      { idCorretora: 3, nome: 'Clear', codigo: 'CLEAR', ativa: true },
     ];
   }
 

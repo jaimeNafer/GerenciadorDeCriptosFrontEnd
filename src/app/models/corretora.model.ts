@@ -1,5 +1,5 @@
 export interface Corretora {
-  id: number;
+  idCorretora: number;
   nome: string;
   codigo?: string;
   ativa: boolean;
