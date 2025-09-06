@@ -1,8 +1,340 @@
-<div class="component-container">
-  <h1>📊 Ativos</h1>
-  <p>Acompanhe seus ativos e portfólio de criptomoedas.</p>
-  <div class="info-card">
-    <h3>Carteira de Investimentos</h3>
-    <p>Visualize a distribuição e performance dos seus ativos.</p>
+<div class="container-fluid py-3">
+  <!-- Toolbar -->
+  <div class="mb-3">
+    <h1 class="h4 mb-1">
+      <i class="bi bi-wallet2 me-2"></i>
+      Carteira
+    </h1>
+    <p class="text-body-secondary mb-0">Acompanhe o patrimônio, lucros e composição dos seus ativos</p>
+  </div>
+
+  <!-- KPIs / Cabeçalho -->
+  <div class="row g-3">
+    <!-- Patrimônio total -->
+    <div class="col-12 col-md-6 col-xl-3">
+      <div class="card shadow-sm card-dense kpi-card h-100">
+        <div class="card-body">
+          <div class="d-flex align-items-center mb-2">
+            <i class="bi bi-piggy-bank text-secondary me-2"></i>
+            <span class="text-body-secondary small">Patrimônio total</span>
+          </div>
+
+          <div class="d-flex align-items-center gap-2">
+            <div class="display-6 fw-bold lh-1">{{ patrimonioTotal | currency:'BRL':'symbol':'1.0-0' }}</div>
+            <span class="stat-chip"
+                  [ngClass]="variacaoPct >= 0 ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger'">
+              {{ variacaoPct | number:'1.0-0' }}%
+              <i class="bi" [ngClass]="variacaoPct >= 0 ? 'bi-caret-up-fill' : 'bi-caret-down-fill'"></i>
+            </span>
+          </div>
+
+          <div class="text-body-secondary small mt-2">Valor investido</div>
+          <div class="fw-semibold">{{ valorInvestido | currency:'BRL' }}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Lucro total -->
+    <div class="col-12 col-md-6 col-xl-3">
+      <div class="card shadow-sm card-dense kpi-card h-100">
+        <div class="card-body">
+          <div class="d-flex align-items-center mb-2">
+            <i class="bi bi-graph-up-arrow text-secondary me-2"></i>
+            <span class="text-body-secondary small">Lucro total</span>
+          </div>
+
+          <div class="display-6 fw-bold lh-1 text-success">{{ lucroTotal | currency:'BRL' }}</div>
+
+          <div class="row g-1 mt-2 small">
+            <div class="col-6">
+              <div class="text-body-secondary">Ganho de Capital</div>
+              <div class="fw-semibold">{{ ganhoCapital | currency:'BRL' }}</div>
+            </div>
+            <div class="col-6">
+              <div class="text-body-secondary">Dividendos</div>
+              <div class="fw-semibold">{{ dividendos | currency:'BRL' }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Proventos (12M) -->
+    <div class="col-12 col-md-6 col-xl-3">
+      <div class="card shadow-sm card-dense kpi-card h-100">
+        <div class="card-body">
+          <div class="d-flex align-items-center mb-2">
+            <i class="bi bi-receipt text-secondary me-2"></i>
+            <span class="text-body-secondary small">Proventos recebidos (12M)</span>
+          </div>
+
+          <div class="display-6 fw-bold lh-1">{{ proventos12m | currency:'BRL' }}</div>
+
+          <div class="text-body-secondary small mt-2">Total</div>
+          <div class="fw-semibold">{{ proventosTotal | currency:'BRL' }}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Variação x Rentabilidade -->
+    <div class="col-12 col-md-6 col-xl-3">
+      <div class="card shadow-sm card-dense kpi-card h-100">
+        <div class="card-body">
+          <div class="d-flex align-items-center mb-2">
+            <i class="bi bi-activity text-secondary me-2"></i>
+            <span class="text-body-secondary small">Variação</span>
+            <i class="bi bi-question-circle ms-1 text-body-tertiary" title="+/- sobre valor investido"></i>
+            <span class="ms-auto text-body-secondary small">Rentabilidade</span>
+          </div>
+
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <div class="fw-semibold"
+                   [ngClass]="variacaoPct >= 0 ? 'text-success' : 'text-danger'">
+                {{ variacaoPct | number:'1.2-2' }}%
+                <i class="bi" [ngClass]="variacaoPct >= 0 ? 'bi-caret-up-fill' : 'bi-caret-down-fill'"></i>
+              </div>
+              <div class="small"
+                   [ngClass]="variacaoAbs >= 0 ? 'text-success' : 'text-danger'">
+                {{ variacaoAbs >= 0 ? '+' : '' }}{{ variacaoAbs | currency:'BRL' }}
+              </div>
+            </div>
+
+            <div class="text-end">
+              <div class="fw-semibold"
+                   [ngClass]="rentabilidadePct >= 0 ? 'text-success' : 'text-danger'">
+                {{ rentabilidadePct | number:'1.2-2' }}%
+                <i class="bi" [ngClass]="rentabilidadePct >= 0 ? 'bi-caret-up-fill' : 'bi-caret-down-fill'"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- (Opcional) Seção de gráficos – esqueleto -->
+  <div class="row g-3 mt-1">
+    <div class="col-12 col-xl-8">
+      <div class="card shadow-sm card-dense h-100">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <span class="fw-semibold">Evolução do Patrimônio</span>
+          <div class="d-flex align-items-center gap-2">
+            <div class="btn-group btn-group-sm" role="group" aria-label="Período">
+              <button class="btn btn-outline-secondary" (click)="setPeriodo(3)">3M</button>
+              <button class="btn btn-outline-secondary" (click)="setPeriodo(6)">6M</button>
+              <button class="btn btn-outline-secondary active">12M</button>
+            </div>
+            <div class="dropdown">
+              <button class="btn btn-outline-secondary btn-sm dropdown-toggle" data-bs-toggle="dropdown">
+                Todos os tipos
+              </button>
+              <ul class="dropdown-menu dropdown-menu-end">
+                <li><button class="dropdown-item">Todos os tipos</button></li>
+                <li><button class="dropdown-item">Aportes</button></li>
+                <li><button class="dropdown-item">Ganho de capital</button></li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        <div class="card-body">
+          <div id="chartPatrimonio" class="echart h-300"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12 col-xl-4">
+      <div class="card shadow-sm card-dense h-100">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <span class="fw-semibold">Ativos na Carteira</span>
+          <div class="dropdown">
+            <button class="btn btn-outline-secondary btn-sm dropdown-toggle" data-bs-toggle="dropdown">
+              Todos os tipos
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+              <li><button class="dropdown-item">Todos os tipos</button></li>
+              <li><button class="dropdown-item">Criptos</button></li>
+            </ul>
+          </div>
+        </div>
+        <div class="card-body">
+          <div id="chartDonut" class="echart h-300"></div>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
+<!-- Meus Ativos -->
+<section class="mt-3">
+  <!-- Toolbar da seção -->
+  <div class="d-flex flex-wrap justify-content-between align-items-center mb-2 gap-2">
+    <h2 class="h5 mb-0">
+      Meus Ativos
+      <span class="text-body-secondary small">({{ ativosFiltrados.length }})</span>
+    </h2>
+
+    <div class="d-flex align-items-center gap-2">
+      <div class="input-group input-group-sm" style="min-width: 240px;">
+        <span class="input-group-text"><i class="bi bi-search"></i></span>
+        <input type="text" class="form-control" [(ngModel)]="busca"
+               placeholder="Buscar por nome ou ticker…" (ngModelChange)="aplicarFiltro()">
+      </div>
+
+      <select class="form-select form-select-sm" style="min-width: 160px;"
+              [(ngModel)]="filtroTipo" (ngModelChange)="aplicarFiltro()">
+        <option value="">Todos os tipos</option>
+        <option *ngFor="let t of tiposDisponiveis" [value]="t">{{ t }}</option>
+      </select>
+
+      <select class="form-select form-select-sm" style="min-width: 160px;"
+              [(ngModel)]="filtroCorretora" (ngModelChange)="aplicarFiltro()">
+        <option value="">Todas as corretoras</option>
+        <option *ngFor="let c of corretorasDisponiveis" [value]="c">{{ c }}</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Resumo compacto -->
+  <div class="row g-2 mb-2">
+    <div class="col-6 col-lg-3">
+      <div class="summary-tile">
+        <div class="label">Valor investido</div>
+        <div class="value">{{ totalInvestido | currency:'BRL' }}</div>
+      </div>
+    </div>
+    <div class="col-6 col-lg-3">
+      <div class="summary-tile">
+        <div class="label">Valor atual</div>
+        <div class="value">{{ totalAtual | currency:'BRL' }}</div>
+      </div>
+    </div>
+    <div class="col-6 col-lg-3">
+      <div class="summary-tile">
+        <div class="label">P/L (R$)</div>
+        <div class="value"
+             [ngClass]="totalPL >= 0 ? 'text-success' : 'text-danger'">
+          {{ totalPL | currency:'BRL' }}
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-lg-3">
+      <div class="summary-tile">
+        <div class="label">P/L (%)</div>
+        <div class="value"
+             [ngClass]="totalPLPct >= 0 ? 'text-success' : 'text-danger'">
+          {{ totalPLPct | number:'1.2-2' }}%
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Vazio -->
+  <div *ngIf="!ativosFiltrados.length" class="text-center p-4 border rounded-3">
+    <i class="bi bi-inboxes text-muted icon-xl d-block mb-2"></i>
+    <div class="text-muted">Nenhum ativo encontrado com os filtros atuais.</div>
+  </div>
+
+  <!-- Tabela (md+) -->
+  <div class="table-responsive d-none d-md-block">
+    <table class="table table-hover table-compact align-middle mb-0">
+      <thead class="table-dark">
+        <tr>
+          <th class="py-2">Ativo</th>
+          <th class="py-2 text-end">Quantidade</th>
+          <th class="py-2 text-end">Preço médio</th>
+          <th class="py-2 text-end">Investido</th>
+          <th class="py-2 text-end">Preço atual</th>
+          <th class="py-2 text-end">Valor atual</th>
+          <th class="py-2 text-end">P/L (R$)</th>
+          <th class="py-2 text-end">P/L (%)</th>
+          <th class="py-2">Corretora</th>
+          <th class="py-2">Atualizado</th>
+          <th class="py-2 text-end">Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let a of ativosFiltrados; trackBy: trackByAtivo">
+          <td class="py-2">
+            <div class="fw-semibold">{{ a.simbolo }}</div>
+            <small class="text-body-secondary">{{ a.nome }}</small>
+          </td>
+          <td class="py-2 text-end font-monospace">{{ formatNumber(a.quantidade) }}</td>
+          <td class="py-2 text-end font-monospace">{{ a.precoMedio | currency:'BRL' }}</td>
+          <td class="py-2 text-end font-monospace">{{ a.investido | currency:'BRL' }}</td>
+          <td class="py-2 text-end font-monospace">{{ a.precoAtual | currency:'BRL' }}</td>
+          <td class="py-2 text-end font-monospace">{{ a.valorAtual | currency:'BRL' }}</td>
+          <td class="py-2 text-end font-monospace"
+              [ngClass]="a.plValor >= 0 ? 'text-success' : 'text-danger'">
+            {{ a.plValor | currency:'BRL' }}
+          </td>
+          <td class="py-2 text-end font-monospace"
+              [ngClass]="a.plPct >= 0 ? 'text-success' : 'text-danger'">
+            {{ a.plPct | number:'1.2-2' }}%
+          </td>
+          <td class="py-2">
+            <span class="badge text-bg-light">{{ a.corretora || '-' }}</span>
+          </td>
+          <td class="py-2">
+            <small class="text-body-secondary">{{ formatDate(a.ultimaAtualizacao) }}</small>
+          </td>
+          <td class="py-2 text-end">
+            <div class="btn-group btn-group-sm">
+              <button class="btn btn-outline-secondary" (click)="verOperacoes(a)" title="Ver operações">
+                <i class="bi bi-list-ul"></i>
+              </button>
+              <button class="btn btn-outline-secondary" (click)="detalhar(a)" title="Detalhar ativo">
+                <i class="bi bi-bar-chart"></i>
+              </button>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Cards (mobile) -->
+  <div class="d-md-none">
+    <div class="asset-card" *ngFor="let a of ativosFiltrados; trackBy: trackByAtivo">
+      <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <div class="fw-semibold">{{ a.simbolo }}</div>
+          <small class="text-body-secondary">{{ a.nome }}</small>
+        </div>
+        <span class="badge" [class]="(a.plPct >= 0 ? 'text-bg-success' : 'text-bg-danger')">
+          {{ a.plPct | number:'1.0-1' }}%
+        </span>
+      </div>
+
+      <div class="row g-2 mt-1 small font-monospace">
+        <div class="col-6">
+          <div class="label">Qtd</div>
+          <div>{{ formatNumber(a.quantidade) }}</div>
+        </div>
+        <div class="col-6 text-end">
+          <div class="label">Preço méd.</div>
+          <div>{{ a.precoMedio | currency:'BRL' }}</div>
+        </div>
+        <div class="col-6">
+          <div class="label">Investido</div>
+          <div>{{ a.investido | currency:'BRL' }}</div>
+        </div>
+        <div class="col-6 text-end">
+          <div class="label">Atual</div>
+          <div>{{ a.valorAtual | currency:'BRL' }}</div>
+        </div>
+      </div>
+
+      <div class="d-flex justify-content-between align-items-center mt-2">
+        <small class="text-body-secondary">{{ a.corretora || '-' }} • {{ formatDate(a.ultimaAtualizacao) }}</small>
+        <div class="btn-group btn-group-sm">
+          <button class="btn btn-outline-secondary" (click)="verOperacoes(a)" title="Ver operações">
+            <i class="bi bi-list-ul"></i>
+          </button>
+          <button class="btn btn-outline-secondary" (click)="detalhar(a)" title="Detalhar ativo">
+            <i class="bi bi-bar-chart"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>

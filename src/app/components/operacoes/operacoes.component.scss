@@ -1,0 +1,34 @@
+/* reutiliza o conceito de densidade da outra tela */
+.card-dense .card-header { padding: .5rem .75rem; }
+.card-dense .card-body   { padding: .75rem; }
+
+/* kpis compactos */
+.kpis { padding: .5rem .75rem; border-top: 1px solid var(--bs-border-color);
+        border-bottom: 1px solid var(--bs-border-color); background: var(--bs-body-bg); }
+.kpi .value { font-weight: 700; }
+.kpi .label { font-size: .8rem; color: var(--bs-secondary-color); }
+
+/* tabela mais “clean” e densa */
+.table-compact > :not(caption) > * > * { padding: .4rem .5rem; }
+.table thead th { vertical-align: middle; }
+
+/* divisor mensal (linha-resumo do mês) */
+.month-divider td {
+  background: var(--bs-tertiary-bg);
+  border-top: 1px solid var(--bs-border-color);
+  padding: .4rem .5rem !important;
+}
+.month-meta { display: flex; flex-wrap: wrap; gap: .75rem; align-items: center; }
+
+/* badge pequena para tipo de operação */
+.badge-sm { font-size: .75rem; }
+.tipo-badge.compra       { background: rgba(13,110,253,.1); color: #0d6efd; }
+.tipo-badge.venda        { background: rgba(220,53,69,.1); color: #dc3545; }
+.tipo-badge.transfer-in  { background: rgba(13,202,240,.1); color: #0dcaf0; }
+.tipo-badge.transfer-out { background: rgba(255,193,7,.15); color: #ffc107; }
+.tipo-badge.staking      { background: rgba(111,66,193,.12); color: #6f42c1; }
+.tipo-badge.reward       { background: rgba(25,135,84,.12); color: #198754; }
+.tipo-badge.airdrop      { background: rgba(102,16,242,.12); color: #6610f2; }
+
+/* ícone grande sem inline style */
+.icon-xl { font-size: 2rem; }
