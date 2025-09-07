@@ -1,13 +1,20 @@
+import { Carteira } from "./carteira.model";
+
 export interface Arquivo {
   id?: number;
   nome: string;
   carteiraId: number;
-  dataUpload: Date;
+  dataCriacao?: Date;
   tamanho?: number;
+  tamanhoBytes?: number;
   status: StatusArquivo;
-  totalOperacoes?: number;
+  carteira?: {
+    idCarteira: number;
+    nome: string;
+  };
+  arquivoOriginal?: File; // Para arquivos locais antes do upload
   observacoes?: string;
-  arquivoOriginal?: File; // Arquivo original para processamento posterior
+  totalOperacoes?: number;
 }
 
 export enum StatusArquivo {

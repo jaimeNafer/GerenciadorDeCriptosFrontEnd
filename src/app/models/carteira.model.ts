@@ -7,16 +7,6 @@ export interface Carteira {
   idCarteira: number;
   nome: string;
   corretora?: Corretora;
-  corretoraId?: number; // Mantido para compatibilidade
-  dataCriacao?: Date;
-  excluido?: boolean;
-}
-
-// Interface para compatibilidade com código existente
-export interface CarteiraLegacy {
-  id?: number;
-  nome: string;
-  corretoraId: number;
   dataCriacao?: Date;
   excluido?: boolean;
 }

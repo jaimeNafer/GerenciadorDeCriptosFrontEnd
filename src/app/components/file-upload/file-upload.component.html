@@ -1,8 +1,8 @@
 <div class="modal-overlay" *ngIf="isVisible" (click)="onCancelClick()">
   <div class="modal-content" (click)="$event.stopPropagation()">
     <div class="modal-header">
-      <h3>Upload de Arquivo CSV</h3>
-      <button type="button" class="close-btn" (click)="onCancelClick()" [disabled]="isUploading">
+      <h3>Selecionar Arquivo CSV</h3>
+      <button type="button" class="close-btn" (click)="onCancelClick()">
         <span>&times;</span>
       </button>
     </div>
@@ -56,7 +56,7 @@
             type="button" 
             class="remove-file-btn" 
             (click)="removeFile()"
-            [disabled]="isUploading"
+  
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -91,16 +91,7 @@
         ></textarea>
       </div>
 
-      <!-- Barra de Progresso -->
-      <div *ngIf="isUploading" class="upload-progress">
-        <div class="progress-info">
-          <span>Fazendo upload...</span>
-          <span>{{ uploadProgress }}%</span>
-        </div>
-        <div class="progress-bar">
-          <div class="progress-fill" [style.width.%]="uploadProgress"></div>
-        </div>
-      </div>
+
 
       <!-- Ações -->
       <div class="form-actions">
@@ -108,18 +99,16 @@
           type="button"
           class="btn btn-secondary"
           (click)="onCancelClick()"
-          [disabled]="isUploading"
         >
-          {{ isUploading ? 'Cancelar Upload' : 'Cancelar' }}
+          Cancelar
         </button>
         <button
           type="button"
           class="btn btn-primary"
-          (click)="uploadFile()"
-          [disabled]="!canUpload"
+          (click)="selectFile()"
+          [disabled]="!canSelect"
         >
-          <span *ngIf="isUploading" class="loading-spinner"></span>
-          {{ isUploading ? 'Enviando...' : 'Fazer Upload' }}
+          Selecionar Arquivo
         </button>
       </div>
     </div>

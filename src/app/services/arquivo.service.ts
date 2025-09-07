@@ -1,8 +1,8 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { Observable, BehaviorSubject, of, timer, throwError } from 'rxjs';
-import { map, switchMap, catchError } from 'rxjs/operators';
-import { Arquivo, UploadArquivoRequest, ProcessarArquivoResponse, StatusArquivo } from '../models/arquivo.model';
+import { Observable, BehaviorSubject, of, throwError } from 'rxjs';
+import { map, catchError } from 'rxjs/operators';
+import { Arquivo, UploadArquivoRequest, StatusArquivo } from '../models/arquivo.model';
 
 @Injectable({
   providedIn: 'root'
@@ -24,9 +24,9 @@ export class ArquivoService {
   }
 
   // Carregar arquivos por carteira
-  loadArquivosByCarteira(carteiraId: number): void {
-    this.getArquivosByCarteira(carteiraId).subscribe({
-      next: (arquivosAPI) => {
+  loadArquivosByCarteira(carteiraId: number): Observable<any> {
+    return this.getArquivosByCarteira(carteiraId).pipe(
+      map((arquivosAPI) => {
         // Manter arquivos locais (PENDENTE/PROCESSANDO) e adicionar os da API
         const arquivosAtuais = this.arquivosSubject.value;
         const arquivosLocais = arquivosAtuais.filter(a => 
@@ -42,8 +42,9 @@ export class ArquivoService {
         console.log('Arquivos combinados:', arquivosCombinados);
         
         this.arquivosSubject.next(arquivosCombinados);
-      },
-      error: (error) => {
+        return arquivosCombinados;
+      }),
+      catchError((error) => {
         console.error('Erro ao carregar arquivos:', error);
         // Manter apenas arquivos locais em caso de erro
         const arquivosAtuais = this.arquivosSubject.value;
@@ -52,8 +53,10 @@ export class ArquivoService {
           (a.status === StatusArquivo.PENDENTE || a.status === StatusArquivo.PROCESSANDO)
         );
         this.arquivosSubject.next(arquivosLocais);
-      }
-    });
+        // Propagar o erro para o componente
+        return throwError(() => error);
+      })
+    );
   }
 
   // Obter arquivos por carteira via API
@@ -64,8 +67,8 @@ export class ArquivoService {
         nome: arquivo.nome,
         carteiraId: arquivo.carteira?.idCarteira || carteiraId,
         dataUpload: new Date(arquivo.dataCriacao || new Date()),
-        tamanho: arquivo.tamanho || 0,
-        status: StatusArquivo.PROCESSADO, // Assumindo que arquivos retornados já foram processados
+        tamanho: arquivo.tamanhoBytes || 0,
+        status: arquivo.status as StatusArquivo, // Usar o status real do backend
         totalOperacoes: arquivo.totalOperacoes || 0,
         observacoes: arquivo.observacoes
       }))),
@@ -88,24 +91,36 @@ export class ArquivoService {
   }
 
   // Upload de arquivo - envia para API como MultipartFile
-  uploadArquivo(request: UploadArquivoRequest): Observable<{ progress: number; arquivo?: Arquivo }> {
+  uploadArquivo(request: UploadArquivoRequest): Observable<Arquivo> {
     // Criar FormData para envio como MultipartFile
     const formData = new FormData();
-    formData.append('arquivo', request.arquivo);
+    formData.append('file', request.arquivo);
     if (request.observacoes) {
       formData.append('observacoes', request.observacoes);
     }
     
     // Enviar para API
-    return this.http.post<Arquivo>(`${this.apiUrl}/${request.carteiraId}/arquivos`, formData).pipe(
-      map(arquivoResponse => {
-        console.log('Arquivo enviado com sucesso para API:', arquivoResponse);
+    return this.http.post<any>(`${this.apiUrl}/${request.carteiraId}/arquivos`, formData).pipe(
+      map(response => {
+        console.log('Resposta do backend:', response);
+        
+        // Mapear resposta do backend para modelo Arquivo
+        const arquivoMapeado: Arquivo = {
+          id: response.idArquivo,
+          nome: response.nome,
+          carteiraId: response.carteira?.idCarteira || request.carteiraId,
+          status: response.status as StatusArquivo,
+          tamanho: response.tamanhoBytes || 0,
+          carteira: response.carteira
+        };
+        
+        console.log('Arquivo mapeado:', arquivoMapeado);
         
         // Adicionar à lista local
         const arquivosAtuais = this.arquivosSubject.value;
-        this.arquivosSubject.next([arquivoResponse, ...arquivosAtuais]);
+        this.arquivosSubject.next([arquivoMapeado, ...arquivosAtuais]);
         
-        return { progress: 100, arquivo: arquivoResponse };
+        return arquivoMapeado;
       }),
       catchError(error => {
         console.error('Erro ao enviar arquivo para API:', error);
@@ -114,61 +129,11 @@ export class ArquivoService {
     );
   }
 
-  // Processar arquivo CSV - chama API de processamento
-  processarArquivo(id: number, carteiraId: number): Observable<ProcessarArquivoResponse> {
-    // Buscar arquivo na lista local
-    const arquivos = this.arquivosSubject.value;
-    console.log('Arquivos disponíveis:', arquivos);
-    console.log('Procurando arquivo com ID:', id);
-    const arquivo = arquivos.find(a => a.id === id);
-    console.log('Arquivo encontrado:', arquivo);
-    
-    if (!arquivo) {
-      console.error('Arquivo não encontrado na lista local');
-      return throwError(() => new Error('Arquivo não encontrado'));
-    }
-    
-    // Atualizar status para PROCESSANDO
-    const arquivosAtualizados = arquivos.map(a => 
-      a.id === id ? { ...a, status: StatusArquivo.PROCESSANDO } : a
-    );
-    this.arquivosSubject.next(arquivosAtualizados);
-    
-    // Chamar API de processamento (POST para processar arquivo já enviado)
-    return this.http.post<ProcessarArquivoResponse>(`${this.apiUrl}/${carteiraId}/arquivos/${id}/processar`, {}).pipe(
-      map(response => {
-        console.log('Resposta da API de processamento:', response);
-        
-        // Atualizar arquivo com dados da API
-        const arquivosFinais = this.arquivosSubject.value.map(a => {
-          if (a.id === id) {
-            return {
-              ...a,
-              id: response.idArquivo, // Usar ID real da API
-              nome: response.nome || a.nome,
-              dataUpload: new Date(response.dataCriacao || a.dataUpload),
-              status: StatusArquivo.PROCESSADO,
-              totalOperacoes: response.totalOperacoes || 0,
-              arquivoOriginal: undefined // Remover arquivo original após processamento
-            };
-          }
-          return a;
-        });
-        this.arquivosSubject.next(arquivosFinais);
-        
-        return {
-          sucesso: true,
-          totalOperacoes: response.totalOperacoes || 0
-        };
-      }),
+  // Verificar status do arquivo via API
+  getStatusArquivo(carteiraId: number, arquivoId: number): Observable<{ status: string }> {
+    return this.http.get<{ status: string }>(`${this.apiUrl}/${carteiraId}/arquivos/${arquivoId}/status`).pipe(
       catchError(error => {
-        // Atualizar status para ERRO em caso de falha
-        const arquivosComErro = this.arquivosSubject.value.map(a => 
-          a.id === id ? { ...a, status: StatusArquivo.ERRO } : a
-        );
-        this.arquivosSubject.next(arquivosComErro);
-        
-        console.error('Erro ao processar arquivo:', error);
+        console.error('Erro ao verificar status do arquivo:', error);
         return throwError(() => error);
       })
     );
