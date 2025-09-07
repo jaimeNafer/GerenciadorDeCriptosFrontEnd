@@ -1,0 +1,32 @@
+<div class="modal fade" [class.show]="isVisible" [style.display]="isVisible ? 'block' : 'none'" 
+     tabindex="-1" role="dialog" aria-labelledby="confirmationModalLabel" aria-hidden="!isVisible"
+     (click)="onBackdropClick($event)">
+  <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="confirmationModalLabel">
+          <i class="fas fa-exclamation-triangle text-warning me-2"></i>
+          {{ title }}
+        </h5>
+        <button type="button" class="btn-close" [disabled]="isLoading" (click)="onCancel()" aria-label="Fechar"></button>
+      </div>
+      <div class="modal-body">
+        <p class="mb-3">{{ message }}</p>
+        <div *ngIf="warningMessage" class="alert alert-warning d-flex align-items-center" role="alert">
+          <i class="fas fa-exclamation-triangle me-2"></i>
+          <div>{{ warningMessage }}</div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" [disabled]="isLoading" (click)="onCancel()">
+          {{ cancelButtonText }}
+        </button>
+        <button type="button" class="btn" [class]="confirmButtonClass" [disabled]="isLoading" (click)="onConfirm()">
+          <span *ngIf="isLoading" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+          {{ confirmButtonText }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+<div *ngIf="isVisible" class="modal-backdrop fade show"></div>

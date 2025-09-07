@@ -1,133 +1,197 @@
 import { Injectable } from '@angular/core';
-import { Observable, BehaviorSubject, of, timer } from 'rxjs';
-import { map, switchMap } from 'rxjs/operators';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { Observable, BehaviorSubject, of, timer, throwError } from 'rxjs';
+import { map, switchMap, catchError } from 'rxjs/operators';
 import { Arquivo, UploadArquivoRequest, ProcessarArquivoResponse, StatusArquivo } from '../models/arquivo.model';
 
 @Injectable({
   providedIn: 'root'
 })
 export class ArquivoService {
+  private readonly apiUrl = 'http://localhost:8080/v1/carteiras';
   private arquivosSubject = new BehaviorSubject<Arquivo[]>([]);
   public arquivos$ = this.arquivosSubject.asObservable();
 
-  constructor() {}
+  constructor(private http: HttpClient) {}
 
-  // Carregar arquivos por carteira (mockado)
+  // Adicionar arquivo ao estado local
+  addArquivo(arquivo: Arquivo): void {
+    const arquivosAtuais = this.arquivosSubject.value;
+    const novosArquivos = [arquivo, ...arquivosAtuais];
+    console.log('Adicionando arquivo ao serviço:', arquivo);
+    console.log('Lista atualizada:', novosArquivos);
+    this.arquivosSubject.next(novosArquivos);
+  }
+
+  // Carregar arquivos por carteira
   loadArquivosByCarteira(carteiraId: number): void {
-    this.getArquivosByCarteira(carteiraId).subscribe(arquivos => {
-      this.arquivosSubject.next(arquivos);
+    this.getArquivosByCarteira(carteiraId).subscribe({
+      next: (arquivosAPI) => {
+        // Manter arquivos locais (PENDENTE/PROCESSANDO) e adicionar os da API
+        const arquivosAtuais = this.arquivosSubject.value;
+        const arquivosLocais = arquivosAtuais.filter(a => 
+          a.carteiraId === carteiraId && 
+          (a.status === StatusArquivo.PENDENTE || a.status === StatusArquivo.PROCESSANDO)
+        );
+        
+        // Combinar arquivos locais com os da API
+        const arquivosCombinados = [...arquivosLocais, ...arquivosAPI];
+        console.log('Carregando arquivos da carteira:', carteiraId);
+        console.log('Arquivos da API:', arquivosAPI);
+        console.log('Arquivos locais mantidos:', arquivosLocais);
+        console.log('Arquivos combinados:', arquivosCombinados);
+        
+        this.arquivosSubject.next(arquivosCombinados);
+      },
+      error: (error) => {
+        console.error('Erro ao carregar arquivos:', error);
+        // Manter apenas arquivos locais em caso de erro
+        const arquivosAtuais = this.arquivosSubject.value;
+        const arquivosLocais = arquivosAtuais.filter(a => 
+          a.carteiraId === carteiraId && 
+          (a.status === StatusArquivo.PENDENTE || a.status === StatusArquivo.PROCESSANDO)
+        );
+        this.arquivosSubject.next(arquivosLocais);
+      }
     });
   }
 
-  // Obter arquivos por carteira (mockado)
+  // Obter arquivos por carteira via API
   getArquivosByCarteira(carteiraId: number): Observable<Arquivo[]> {
-    const arquivos = this.getMockArquivos(carteiraId);
-    return of(arquivos);
+    return this.http.get<any[]>(`${this.apiUrl}/${carteiraId}/arquivos`).pipe(
+      map(response => response.map(arquivo => ({
+        id: arquivo.idArquivo,
+        nome: arquivo.nome,
+        carteiraId: arquivo.carteira?.idCarteira || carteiraId,
+        dataUpload: new Date(arquivo.dataCriacao || new Date()),
+        tamanho: arquivo.tamanho || 0,
+        status: StatusArquivo.PROCESSADO, // Assumindo que arquivos retornados já foram processados
+        totalOperacoes: arquivo.totalOperacoes || 0,
+        observacoes: arquivo.observacoes
+      }))),
+      catchError(this.handleError)
+    );
   }
 
-  // Obter arquivo por ID (mockado)
+  // Obter arquivo por ID
   getArquivoById(id: number): Observable<Arquivo> {
-    // Para buscar por ID, vamos buscar em todas as carteiras
-    const todasCarteiras = [1, 2, 3]; // IDs das carteiras mockadas
-    let arquivo: Arquivo | undefined;
+    // Buscar no estado atual dos arquivos carregados
+    const arquivos = this.arquivosSubject.value;
+    const arquivo = arquivos.find(a => a.id === id);
     
-    for (const carteiraId of todasCarteiras) {
-      arquivo = this.getMockArquivos(carteiraId).find(a => a.id === id);
-      if (arquivo) break;
+    if (arquivo) {
+      return of(arquivo);
     }
     
-    return of(arquivo!);
+    // Se não encontrou, retornar erro
+    return throwError(() => new Error(`Arquivo com ID ${id} não encontrado`));
   }
 
-  // Upload de arquivo com progresso (mockado)
+  // Upload de arquivo - envia para API como MultipartFile
   uploadArquivo(request: UploadArquivoRequest): Observable<{ progress: number; arquivo?: Arquivo }> {
-    // Simular progresso de upload
-    return timer(0, 200).pipe(
-      map(tick => {
-        const progress = Math.min((tick + 1) * 20, 100);
+    // Criar FormData para envio como MultipartFile
+    const formData = new FormData();
+    formData.append('arquivo', request.arquivo);
+    if (request.observacoes) {
+      formData.append('observacoes', request.observacoes);
+    }
+    
+    // Enviar para API
+    return this.http.post<Arquivo>(`${this.apiUrl}/${request.carteiraId}/arquivos`, formData).pipe(
+      map(arquivoResponse => {
+        console.log('Arquivo enviado com sucesso para API:', arquivoResponse);
         
-        if (progress === 100) {
-          // Criar arquivo mockado quando upload completa
-          const novoArquivo: Arquivo = {
-            id: Date.now(),
-            nome: request.arquivo.name,
-            carteiraId: request.carteiraId,
-            dataUpload: new Date(),
-            tamanho: request.arquivo.size,
-            status: StatusArquivo.PENDENTE,
-            totalOperacoes: 0,
-            observacoes: request.observacoes
-          };
-          
-          // Adicionar à lista de arquivos
-          const arquivos = this.arquivosSubject.value;
-          arquivos.push(novoArquivo);
-          this.arquivosSubject.next(arquivos);
-          
-          return { progress: 100, arquivo: novoArquivo };
-        }
+        // Adicionar à lista local
+        const arquivosAtuais = this.arquivosSubject.value;
+        this.arquivosSubject.next([arquivoResponse, ...arquivosAtuais]);
         
-        return { progress };
+        return { progress: 100, arquivo: arquivoResponse };
       }),
-      switchMap(result => {
-        if (result.progress === 100) {
-          return of(result);
-        }
-        return of(result);
+      catchError(error => {
+        console.error('Erro ao enviar arquivo para API:', error);
+        return throwError(() => error);
       })
     );
   }
 
-  // Processar arquivo CSV (mockado)
-  processarArquivo(id: number): Observable<ProcessarArquivoResponse> {
-    // Simular processamento
+  // Processar arquivo CSV - chama API de processamento
+  processarArquivo(id: number, carteiraId: number): Observable<ProcessarArquivoResponse> {
+    // Buscar arquivo na lista local
     const arquivos = this.arquivosSubject.value;
-    const index = arquivos.findIndex(a => a.id === id);
+    console.log('Arquivos disponíveis:', arquivos);
+    console.log('Procurando arquivo com ID:', id);
+    const arquivo = arquivos.find(a => a.id === id);
+    console.log('Arquivo encontrado:', arquivo);
     
-    if (index !== -1) {
-      // Atualizar status para processando
-      arquivos[index].status = StatusArquivo.PROCESSANDO;
-      this.arquivosSubject.next(arquivos);
-      
-      // Simular processamento com delay
-      return timer(2000).pipe(
-        map(() => {
-          // Atualizar para processado com operações mockadas
-          arquivos[index].status = StatusArquivo.PROCESSADO;
-          arquivos[index].totalOperacoes = Math.floor(Math.random() * 100) + 10;
-          this.arquivosSubject.next(arquivos);
-          
-          return {
-            sucesso: true,
-            totalOperacoes: arquivos[index].totalOperacoes!,
-            operacoesProcessadas: arquivos[index].totalOperacoes!,
-            erros: []
-          };
-        })
-      );
+    if (!arquivo) {
+      console.error('Arquivo não encontrado na lista local');
+      return throwError(() => new Error('Arquivo não encontrado'));
     }
     
-    return of({
-      sucesso: false,
-      totalOperacoes: 0,
-      operacoesProcessadas: 0,
-      erros: ['Arquivo não encontrado']
-    });
+    // Atualizar status para PROCESSANDO
+    const arquivosAtualizados = arquivos.map(a => 
+      a.id === id ? { ...a, status: StatusArquivo.PROCESSANDO } : a
+    );
+    this.arquivosSubject.next(arquivosAtualizados);
+    
+    // Chamar API de processamento (POST para processar arquivo já enviado)
+    return this.http.post<ProcessarArquivoResponse>(`${this.apiUrl}/${carteiraId}/arquivos/${id}/processar`, {}).pipe(
+      map(response => {
+        console.log('Resposta da API de processamento:', response);
+        
+        // Atualizar arquivo com dados da API
+        const arquivosFinais = this.arquivosSubject.value.map(a => {
+          if (a.id === id) {
+            return {
+              ...a,
+              id: response.idArquivo, // Usar ID real da API
+              nome: response.nome || a.nome,
+              dataUpload: new Date(response.dataCriacao || a.dataUpload),
+              status: StatusArquivo.PROCESSADO,
+              totalOperacoes: response.totalOperacoes || 0,
+              arquivoOriginal: undefined // Remover arquivo original após processamento
+            };
+          }
+          return a;
+        });
+        this.arquivosSubject.next(arquivosFinais);
+        
+        return {
+          sucesso: true,
+          totalOperacoes: response.totalOperacoes || 0
+        };
+      }),
+      catchError(error => {
+        // Atualizar status para ERRO em caso de falha
+        const arquivosComErro = this.arquivosSubject.value.map(a => 
+          a.id === id ? { ...a, status: StatusArquivo.ERRO } : a
+        );
+        this.arquivosSubject.next(arquivosComErro);
+        
+        console.error('Erro ao processar arquivo:', error);
+        return throwError(() => error);
+      })
+    );
   }
 
-  // Deletar arquivo (mockado)
-  deleteArquivo(id: number): Observable<void> {
-    const arquivos = this.arquivosSubject.value.filter(a => a.id !== id);
-    this.arquivosSubject.next(arquivos);
-    return of(void 0);
+  // Deletar arquivo via API
+  deleteArquivo(id: number, carteiraId: number): Observable<void> {
+    return this.http.delete<void>(`${this.apiUrl}/${carteiraId}/arquivos/${id}`).pipe(
+      map(() => {
+        // Recarregar lista de arquivos após exclusão
+        this.loadArquivosByCarteira(carteiraId);
+      }),
+      catchError(this.handleError)
+    );
   }
 
-  // Baixar arquivo original (mockado)
-  downloadArquivo(id: number): Observable<Blob> {
-    // Simular download criando um blob com conteúdo CSV mockado
-    const csvContent = 'Data,Tipo,Ativo,Quantidade,Preco\n2024-01-15,Compra,BTC,0.1,50000\n';
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    return of(blob);
+  // Baixar arquivo original via API
+  downloadArquivo(id: number, carteiraId: number): Observable<Blob> {
+    return this.http.get(`${this.apiUrl}/${carteiraId}/arquivos/${id}/download`, {
+      responseType: 'blob'
+    }).pipe(
+      catchError(this.handleError)
+    );
   }
 
   // Validar formato do arquivo CSV
@@ -156,38 +220,9 @@ export class ArquivoService {
     };
   }
 
-  // Dados mock para desenvolvimento
-  getMockArquivos(carteiraId: number): Arquivo[] {
-    return [
-      {
-        id: 1,
-        nome: 'operacoes_janeiro_2024.csv',
-        carteiraId: carteiraId,
-        dataUpload: new Date('2024-01-15T10:30:00'),
-        tamanho: 2048,
-        status: StatusArquivo.PROCESSADO,
-        totalOperacoes: 45,
-        observacoes: 'Importação mensal'
-      },
-      {
-        id: 2,
-        nome: 'trades_fevereiro_2024.csv',
-        carteiraId: carteiraId,
-        dataUpload: new Date('2024-02-01T14:15:00'),
-        tamanho: 1536,
-        status: StatusArquivo.PROCESSANDO,
-        totalOperacoes: 0
-      },
-      {
-        id: 3,
-        nome: 'operacoes_marco_2024.csv',
-        carteiraId: carteiraId,
-        dataUpload: new Date('2024-03-01T09:45:00'),
-        tamanho: 3072,
-        status: StatusArquivo.ERRO,
-        totalOperacoes: 0,
-        observacoes: 'Erro no formato da data'
-      }
-    ];
+  // Tratamento de erros
+  private handleError(error: HttpErrorResponse): Observable<never> {
+    console.error('Erro na requisição de arquivos:', error);
+    return throwError(() => error);
   }
 }

@@ -1,28 +1,35 @@
-import { Component, OnInit, inject, ViewEncapsulation } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, ViewEncapsulation } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CarteiraFormComponent } from '../carteira-form/carteira-form.component';
 import { FileUploadComponent } from '../file-upload/file-upload.component';
+import { ConfirmationModalComponent } from '../confirmation-modal/confirmation-modal.component';
 import { CarteiraService } from '../../services/carteira.service';
 import { ArquivoService } from '../../services/arquivo.service';
 import { Carteira } from '../../models/carteira.model';
 import { Arquivo, StatusArquivo } from '../../models/arquivo.model';
 import { Corretora } from '../../models/corretora.model';
+import { Subject, takeUntil } from 'rxjs';
 
 @Component({
   selector: 'app-importacao',
   standalone: true,
-  imports: [CommonModule, FormsModule, CarteiraFormComponent, FileUploadComponent],
+  imports: [CommonModule, FormsModule, CarteiraFormComponent, FileUploadComponent, ConfirmationModalComponent],
   providers: [CarteiraService, ArquivoService],
   templateUrl: './importacao.html',
   styleUrl: './importacao.scss',
   encapsulation: ViewEncapsulation.None
 })
-export class ImportacaoComponent implements OnInit {
+export class ImportacaoComponent implements OnInit, OnDestroy {
   carteiras: Carteira[] = [];
   arquivos: Arquivo[] = [];
   corretoras: Corretora[] = [];
+  
+  // Expor enum para uso no template
+  StatusArquivo = StatusArquivo;
 
+  // Subject para gerenciar unsubscribe
+  private destroy$ = new Subject<void>();
   
   selectedCarteira: Carteira | null = null;
   carteiraParaEdicao: Carteira | null = null;
@@ -39,6 +46,12 @@ export class ImportacaoComponent implements OnInit {
   alertMessage = '';
   alertType: 'success' | 'danger' | 'warning' | 'info' = 'info';
   showAlert = false;
+  
+  // Modal de confirmação para exclusão
+  showDeleteModal = false;
+  carteiraParaExcluir: Carteira | null = null;
+  isDeleting = false;
+  
   private readonly carteiraService: CarteiraService;
   private readonly arquivoService: ArquivoService;
   
@@ -93,23 +106,28 @@ export class ImportacaoComponent implements OnInit {
   loadArquivosByCarteira(carteiraId: number): void {
     this.isLoadingArquivos = true;
     
-    // Usando dados mock por enquanto
-    setTimeout(() => {
-      this.arquivos = this.arquivoService.getMockArquivos(carteiraId);
-      this.isLoadingArquivos = false;
-    }, 300);
+    // Usar o método do serviço que mantém arquivos locais
+    this.arquivoService.loadArquivosByCarteira(carteiraId);
     
-    // Para usar API real, descomente:
-    // this.arquivoService.getArquivosByCarteira(carteiraId).subscribe({
-    //   next: (arquivos) => {
-    //     this.arquivos = arquivos;
-    //     this.isLoadingArquivos = false;
-    //   },
-    //   error: (error) => {
-    //     console.error('Erro ao carregar arquivos:', error);
-    //     this.isLoadingArquivos = false;
-    //   }
-    // });
+    // Subscrever ao observable do serviço para receber atualizações
+    this.arquivoService.arquivos$.pipe(
+      takeUntil(this.destroy$)
+    ).subscribe({
+      next: (arquivos) => {
+        this.arquivos = arquivos.filter(a => a.carteiraId === carteiraId);
+        this.isLoadingArquivos = false;
+      },
+      error: (error) => {
+        console.error('Erro ao carregar arquivos:', error);
+        this.isLoadingArquivos = false;
+        this.arquivos = [];
+      }
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
   
   // Ações de Carteira
@@ -151,30 +169,63 @@ export class ImportacaoComponent implements OnInit {
 
   
   deletarCarteira(carteira: Carteira): void {
-    if (confirm(`Tem certeza que deseja excluir a carteira "${carteira.nome}"?`)) {
-      // Simular exclusão
-      this.carteiras = this.carteiras.filter(c => c.idCarteira !== carteira.idCarteira);
-      
-      if (this.selectedCarteira?.idCarteira === carteira.idCarteira) {
-        this.selectedCarteira = this.carteiras.length > 0 ? this.carteiras[0] : null;
-        if (this.selectedCarteira) {
-          this.loadArquivosByCarteira(this.selectedCarteira.idCarteira);
-        } else {
+    this.carteiraParaExcluir = carteira;
+    this.showDeleteModal = true;
+  }
+  
+  confirmarExclusaoCarteira(): void {
+    if (!this.carteiraParaExcluir) return;
+    
+    this.isDeleting = true;
+    
+    this.carteiraService.deleteCarteira(this.carteiraParaExcluir.idCarteira).subscribe({
+      next: () => {
+        this.showAlert = true;
+        this.alertType = 'success';
+        this.alertMessage = `Carteira "${this.carteiraParaExcluir!.nome}" excluída com sucesso!`;
+        
+        // Atualizar lista de carteiras
+        this.loadCarteiras();
+        
+        // Se a carteira excluída era a selecionada, limpar seleção
+        if (this.selectedCarteira?.idCarteira === this.carteiraParaExcluir!.idCarteira) {
+          this.selectedCarteira = null;
           this.arquivos = [];
         }
-      }
-      
-      // Para usar API real, descomente:
-      // this.carteiraService.deleteCarteira(carteira.id!).subscribe({
-      //   next: () => {
-      //     this.loadCarteiras();
-      //   },
-      //   error: (error) => {
-      //     console.error('Erro ao excluir carteira:', error);
-      //   }
-      // });
-    }
+        
+        this.fecharModalExclusao();
+      },
+      error: (error) => {
+         console.error('Erro ao excluir carteira:', error);
+         this.showAlert = true;
+         this.alertType = 'danger';
+         this.alertMessage = this.getErrorMessage(error);
+         this.isDeleting = false;
+       }
+    });
   }
+  
+  fecharModalExclusao(): void {
+     this.showDeleteModal = false;
+     this.carteiraParaExcluir = null;
+     this.isDeleting = false;
+   }
+   
+   private getErrorMessage(error: any): string {
+     if (error.status === 404) {
+       return 'Carteira não encontrada. Ela pode já ter sido excluída.';
+     } else if (error.status === 409) {
+       return 'Não é possível excluir esta carteira pois ela possui operações associadas.';
+     } else if (error.status === 403) {
+       return 'Você não tem permissão para excluir esta carteira.';
+     } else if (error.status === 500) {
+       return 'Erro interno do servidor. Tente novamente mais tarde.';
+     } else if (error.status === 0) {
+       return 'Erro de conexão. Verifique sua internet e tente novamente.';
+     } else {
+       return 'Erro ao excluir carteira. Tente novamente.';
+     }
+   }
   
   // Ações de Arquivo
   openUploadArquivo(): void {
@@ -186,7 +237,8 @@ export class ImportacaoComponent implements OnInit {
   }
   
   onUploadComplete(arquivo: Arquivo): void {
-    this.arquivos.unshift(arquivo); // Adicionar no início da lista
+    // Adicionar arquivo através do serviço para manter sincronização
+    this.arquivoService.addArquivo(arquivo);
     this.showFileUpload = false;
   }
   
@@ -196,43 +248,63 @@ export class ImportacaoComponent implements OnInit {
   
   processarArquivo(arquivo: Arquivo): void {
     if (arquivo.status !== StatusArquivo.PENDENTE) {
+      console.log('Arquivo não está pendente. Status atual:', arquivo.status);
       return;
     }
     
-    // Simular processamento
-    arquivo.status = StatusArquivo.PROCESSANDO;
+    console.log('Iniciando processamento do arquivo:', arquivo.nome);
+    console.log('ID do arquivo:', arquivo.id);
+    console.log('Tipo do ID:', typeof arquivo.id);
     
-    setTimeout(() => {
-      arquivo.status = StatusArquivo.PROCESSADO;
-      arquivo.totalOperacoes = Math.floor(Math.random() * 50) + 10;
-    }, 2000);
+    if (!this.selectedCarteira) {
+      console.error('Nenhuma carteira selecionada');
+      return;
+    }
     
-    // Para usar API real, descomente:
-    // this.arquivoService.processarArquivo(arquivo.id!).subscribe({
-    //   next: (response) => {
-    //     arquivo.status = StatusArquivo.PROCESSADO;
-    //     arquivo.totalOperacoes = response.totalOperacoes;
-    //   },
-    //   error: (error) => {
-    //     console.error('Erro ao processar arquivo:', error);
-    //     arquivo.status = StatusArquivo.ERRO;
-    //   }
-    // });
+    if (!arquivo.id) {
+      console.error('ID do arquivo não definido');
+      this.showAlertMessage('Erro: ID do arquivo não definido', 'danger');
+      return;
+    }
+    
+    // Mostrar loading durante processamento
+    this.isLoadingArquivos = true;
+    
+    // Usar API real para processar arquivo
+    this.arquivoService.processarArquivo(arquivo.id, this.selectedCarteira.idCarteira).subscribe({
+      next: (response) => {
+        console.log('Arquivo processado com sucesso:', response);
+        this.showAlertMessage(`Arquivo processado com sucesso! ${response.totalOperacoes} operações criadas.`, 'success');
+        // O status será atualizado automaticamente pelo serviço
+        this.isLoadingArquivos = false;
+      },
+      error: (error) => {
+        console.error('Erro ao processar arquivo:', error);
+        this.showAlertMessage('Erro ao processar arquivo. Tente novamente.', 'danger');
+        // O status de erro será atualizado automaticamente pelo serviço
+        this.isLoadingArquivos = false;
+      }
+    });
   }
   
   deletarArquivo(arquivo: Arquivo): void {
     if (confirm(`Tem certeza que deseja excluir o arquivo "${arquivo.nome}"?`)) {
-      this.arquivos = this.arquivos.filter(a => a.id !== arquivo.id);
+      if (!this.selectedCarteira) {
+        console.error('Nenhuma carteira selecionada');
+        return;
+      }
       
-      // Para usar API real, descomente:
-      // this.arquivoService.deleteArquivo(arquivo.id!).subscribe({
-      //   next: () => {
-      //     this.loadArquivosByCarteira(this.selectedCarteira!.id!);
-      //   },
-      //   error: (error) => {
-      //     console.error('Erro ao excluir arquivo:', error);
-      //   }
-      // });
+      // Usar API real para deletar arquivo
+      this.arquivoService.deleteArquivo(arquivo.id!, this.selectedCarteira.idCarteira).subscribe({
+        next: () => {
+          // A lista será recarregada automaticamente pelo serviço
+          console.log('Arquivo excluído com sucesso');
+        },
+        error: (error) => {
+          console.error('Erro ao excluir arquivo:', error);
+          // Manter arquivo na lista em caso de erro
+        }
+      });
     }
   }
   

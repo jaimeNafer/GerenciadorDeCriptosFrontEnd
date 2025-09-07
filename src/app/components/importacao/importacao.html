@@ -145,11 +145,11 @@
                   <div class="mt-auto">
                     <div class="btn-group btn-group-sm w-100" role="group" aria-label="Ações do arquivo">
                       <!-- Processar -->
-                      <button *ngIf="arquivo.status === 'PENDENTE'" type="button" class="btn btn-success" (click)="processarArquivo(arquivo)">
+                      <button *ngIf="arquivo.status === StatusArquivo.PENDENTE" type="button" class="btn btn-success" (click)="processarArquivo(arquivo)">
                         <i class="bi bi-play-fill me-1"></i> Processar
                       </button>
                       <!-- Processando -->
-                      <button *ngIf="arquivo.status === 'PROCESSANDO'" type="button" class="btn btn-warning" disabled>
+                      <button *ngIf="arquivo.status === StatusArquivo.PROCESSANDO" type="button" class="btn btn-warning" disabled>
                         <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
                         Processando…
                       </button>
@@ -186,4 +186,17 @@
     (uploadComplete)="onUploadComplete($event)"
     (cancelled)="onUploadCanceled()"
   ></app-file-upload>
+
+  <app-confirmation-modal
+    [isVisible]="showDeleteModal"
+    [title]="'Excluir Carteira'"
+    [message]="'Tem certeza que deseja excluir a carteira ' + (carteiraParaExcluir?.nome || '') + '?'"
+    [warningMessage]="'ATENÇÃO: Todos os arquivos associados a esta carteira serão excluídos permanentemente e não poderão ser recuperados.'"
+    [confirmButtonText]="'Excluir Carteira'"
+    [cancelButtonText]="'Cancelar'"
+    [confirmButtonClass]="'btn-danger'"
+    [isLoading]="isDeleting"
+    (confirmed)="confirmarExclusaoCarteira()"
+    (cancelled)="fecharModalExclusao()"
+  ></app-confirmation-modal>
 </div>

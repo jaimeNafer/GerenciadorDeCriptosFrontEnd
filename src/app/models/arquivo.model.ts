@@ -7,6 +7,7 @@ export interface Arquivo {
   status: StatusArquivo;
   totalOperacoes?: number;
   observacoes?: string;
+  arquivoOriginal?: File; // Arquivo original para processamento posterior
 }
 
 export enum StatusArquivo {

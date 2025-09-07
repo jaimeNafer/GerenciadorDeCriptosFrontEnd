@@ -59,11 +59,9 @@ export class CarteiraService {
     throw new Error('Carteira não encontrada');
   }
 
-  // Excluir carteira (mockado)
+  // Excluir carteira
   deleteCarteira(id: number): Observable<void> {
-    const carteiras = this.carteirasSubject.value.filter((c) => c.idCarteira !== id);
-    this.carteirasSubject.next(carteiras);
-    return of(void 0);
+    return this.http.delete<void>(`${this.apiUrl}/${id}`);
   }
 
   // Obter corretoras da API
