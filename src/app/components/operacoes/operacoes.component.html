@@ -8,6 +8,15 @@
     <p class="text-body-secondary mb-0">Consulte o histórico de suas operações de compra e venda de criptomoedas</p>
   </div>
 
+  <!-- Error message -->
+  <div *ngIf="mensagemErro" class="alert alert-danger" role="alert">
+    <i class="bi bi-exclamation-triangle me-2"></i>
+    {{ mensagemErro }}
+    <button type="button" class="btn btn-sm btn-outline-danger ms-2" (click)="loadInitialData()">
+      <i class="bi bi-arrow-clockwise me-1"></i>Tentar novamente
+    </button>
+  </div>
+
   <!-- Filtros (accordion mais enxuto) -->
   <div class="accordion accordion-flush mb-3" id="filtersAccordion">
     <div class="accordion-item">
@@ -24,8 +33,8 @@
             <div class="row g-2 mb-2">
               <div class="col-md-3">
                 <label class="form-label small mb-1">Carteira</label>
-                <select formControlName="carteiraId" class="form-select form-select-sm">
-                  <option value="">Todas as carteiras</option>
+                <select formControlName="carteiraId" class="form-select form-select-sm" (change)="onCarteiraChange()">
+                  <option value="">Selecione uma carteira</option>
                   <option *ngFor="let carteira of carteiras" [value]="carteira.idCarteira">{{ carteira.nome }}</option>
                 </select>
               </div>
@@ -39,13 +48,9 @@
                 <label class="form-label small mb-1">Tipo</label>
                 <select formControlName="tipoOperacao" class="form-select form-select-sm">
                   <option value="">Todos os tipos</option>
-                  <option [value]="TipoOperacao.COMPRA">Compra</option>
-                  <option [value]="TipoOperacao.VENDA">Venda</option>
-                  <option [value]="TipoOperacao.TRANSFERENCIA_ENTRADA">Transferência Entrada</option>
-                  <option [value]="TipoOperacao.TRANSFERENCIA_SAIDA">Transferência Saída</option>
-                  <option [value]="TipoOperacao.STAKING">Staking</option>
-                  <option [value]="TipoOperacao.REWARD">Reward</option>
-                  <option [value]="TipoOperacao.AIRDROP">Airdrop</option>
+                  <option [value]="'COMPRA'">Compra</option>
+                  <option [value]="'VENDA'">Venda</option>
+                  <option [value]="'PERMUTA'">Permuta</option>
                 </select>
               </div>
 
@@ -53,10 +58,9 @@
                 <label class="form-label small mb-1">Status</label>
                 <select formControlName="status" class="form-select form-select-sm">
                   <option value="">Todos os status</option>
-                  <option [value]="StatusOperacao.PENDENTE">Pendente</option>
-                  <option [value]="StatusOperacao.CONFIRMADA">Confirmada</option>
-                  <option [value]="StatusOperacao.CANCELADA">Cancelada</option>
-                  <option [value]="StatusOperacao.ERRO">Erro</option>
+                  <option [value]="'PENDENTE'">Pendente</option>
+                  <option [value]="'PROCESSADA'">Processada</option>
+                  <option [value]="'ERRO'">Erro</option>
                 </select>
               </div>
             </div>
@@ -89,7 +93,7 @@
   <div class="card shadow-sm card-dense">
     <div class="card-header d-flex justify-content-between align-items-center">
       <h5 class="mb-0">Histórico de Operações</h5>
-      <small class="text-body-secondary">{{ totalItems }} operações encontradas</small>
+      <small class="text-body-secondary">{{ 0 }} operações encontradas</small>
     </div>
 
     <!-- KPIs compactos (sempre que houver dados) -->
@@ -118,7 +122,7 @@
     </div>
 
     <div class="card-body p-0" *ngIf="!loading; else loadingTemplate">
-      <div *ngIf="operacoesPorMes.length > 0; else emptyState">
+      <div *ngIf="wrapper.length > 0; else emptyState">
 
         <!-- Tabela -->
         <div class="table-responsive">
@@ -136,83 +140,39 @@
               </tr>
             </thead>
             <tbody>
-              <ng-container *ngFor="let mesDados of operacoesPorMes; let i = index">
-                <!-- Divisor do mês (mais clean) -->
-                <tr class="month-divider">
-                  <td colspan="8">
-                    <div class="month-meta">
-                      <strong class="me-1">{{ mesDados.consolidado.mes }}</strong>
-                      <span class="badge text-bg-light">{{ mesDados.consolidado.totalOperacoes }} operações</span>
-                      <span class="small">Compras: <strong>{{ mesDados.consolidado.totalCompras }}</strong></span>
-                      <span class="small">Vendas: <strong>{{ mesDados.consolidado.totalVendas }}</strong></span>
-                      <span class="small">Volume: <strong class="font-monospace">{{ formatCurrency(mesDados.consolidado.valorTotalCompras + mesDados.consolidado.valorTotalVendas) }}</strong></span>
-                      <span class="small">Saldo:
-                        <strong class="font-monospace"
-                          [class.text-success]="mesDados.consolidado.saldoMensal >= 0"
-                          [class.text-danger]="mesDados.consolidado.saldoMensal < 0">
-                          {{ formatCurrency(mesDados.consolidado.saldoMensal) }}
-                        </strong>
-                      </span>
-                    </div>
-                  </td>
-                </tr>
-
+              <ng-container *ngFor="let wrapper of wrapper; let i = index">
                 <!-- Linhas do mês -->
-                <tr *ngFor="let operacao of mesDados.operacoes" class="operation-row">
+                <tr *ngFor="let operacao of wrapper.operacoes" class="operation-row">
                   <td class="py-1">
-                    <small class="text-body-secondary">{{ formatDate(operacao.dataOperacao) }}</small>
+                    <small class="text-body-secondary">{{ obterDataOperacao(operacao) }}</small>
                   </td>
                   <td class="py-1">
                     <span class="badge badge-sm tipo-badge"
-                          [ngClass]="{
-                            'compra': operacao.tipoOperacao === TipoOperacao.COMPRA,
-                            'venda':  operacao.tipoOperacao === TipoOperacao.VENDA,
-                            'transfer-in':  operacao.tipoOperacao === TipoOperacao.TRANSFERENCIA_ENTRADA,
-                            'transfer-out': operacao.tipoOperacao === TipoOperacao.TRANSFERENCIA_SAIDA,
-                            'staking': operacao.tipoOperacao === TipoOperacao.STAKING,
-                            'reward':  operacao.tipoOperacao === TipoOperacao.REWARD,
-                            'airdrop': operacao.tipoOperacao === TipoOperacao.AIRDROP
-                          }">
+                          [ngClass]="operacao.tipoOperacao.toLocaleLowerCase()">
                       {{ operacao.tipoOperacao }}
                     </span>
                   </td>
                   <td class="py-1">
-                    <div *ngIf="operacao.tipoOperacao === TipoOperacao.COMPRA">
-                      <div class="fw-medium small">BRL</div>
-                      <small class="text-body-secondary">Real</small>
-                    </div>
-                    <div *ngIf="operacao.tipoOperacao === TipoOperacao.VENDA">
-                      <div class="fw-medium small">{{ operacao.criptomoeda }}</div>
-                      <small class="text-body-secondary">{{ operacao.simbolo }}</small>
-                    </div>
-                    <span *ngIf="operacao.tipoOperacao !== TipoOperacao.COMPRA && operacao.tipoOperacao !== TipoOperacao.VENDA">-</span>
+                    <div class="fw-medium small">{{ operacao.moedaEntrada?.ticker || "-" }}</div>
+                    <small class="text-body-secondary" *ngIf="operacao.moedaEntrada?.nome">{{ operacao.moedaEntrada?.nome }}</small>
                   </td>
                   <td class="py-1">
-                    <span *ngIf="operacao.tipoOperacao === TipoOperacao.COMPRA" class="font-monospace small">{{ formatCurrency(operacao.valorTotal) }}</span>
-                    <span *ngIf="operacao.tipoOperacao === TipoOperacao.VENDA"  class="font-monospace small">{{ formatNumber(operacao.quantidade) }}</span>
-                    <span *ngIf="operacao.tipoOperacao !== TipoOperacao.COMPRA && operacao.tipoOperacao !== TipoOperacao.VENDA">-</span>
+                    <span class="font-monospace small">{{ formatCurrency(operacao.quantidadeEntrada) }}</span>
                   </td>
                   <td class="py-1">
-                    <div *ngIf="operacao.tipoOperacao === TipoOperacao.COMPRA">
-                      <div class="fw-medium small">{{ operacao.criptomoeda }}</div>
-                      <small class="text-body-secondary">{{ operacao.simbolo }}</small>
-                    </div>
-                    <div *ngIf="operacao.tipoOperacao === TipoOperacao.VENDA">
-                      <div class="fw-medium small">BRL</div>
-                      <small class="text-body-secondary">Real</small>
-                    </div>
-                    <span *ngIf="operacao.tipoOperacao !== TipoOperacao.COMPRA && operacao.tipoOperacao !== TipoOperacao.VENDA">-</span>
+                    <div class="fw-medium small">{{ operacao.moedaSaida?.ticker || "-" }}</div>
+                    <small class="text-body-secondary" *ngIf="operacao.moedaSaida?.nome">{{ operacao.moedaSaida?.nome }}</small>
                   </td>
                   <td class="py-1">
-                    <span *ngIf="operacao.tipoOperacao === TipoOperacao.COMPRA" class="font-monospace small">{{ formatNumber(operacao.quantidade) }}</span>
-                    <span *ngIf="operacao.tipoOperacao === TipoOperacao.VENDA"  class="font-monospace small">{{ formatCurrency(operacao.valorTotal) }}</span>
-                    <span *ngIf="operacao.tipoOperacao !== TipoOperacao.COMPRA && operacao.tipoOperacao !== TipoOperacao.VENDA">-</span>
+                    <span class="font-monospace small">{{ formatNumber(operacao.quantidadeSaida) }}</span> 
                   </td>
                   <td class="py-1">
-                    <strong class="font-monospace small">{{ formatCurrency(operacao.valorTotal) }}</strong>
+                    <strong class="font-monospace small">{{ formatCurrency(operacao.valorBrl) }}</strong>
                   </td>
                   <td class="py-1">
-                    <span class="text-body-secondary small">-</span>
+                    <span [ngClass]="{'text-success': operacao.lucroPrejuizo >= 0, 'text-danger': operacao.lucroPrejuizo < 0}">
+                      {{ formatCurrency(operacao.lucroPrejuizo) }}
+                    </span>
                   </td>
                 </tr>
               </ng-container>
@@ -238,26 +198,5 @@
         <p class="text-body-secondary mb-0">Carregando operações...</p>
       </div>
     </ng-template>
-
-    <!-- Paginação -->
-    <div class="card-footer bg-light" *ngIf="totalPages > 1">
-      <nav aria-label="Paginação das operações">
-        <ul class="pagination pagination-sm justify-content-center mb-0">
-          <li class="page-item" [class.disabled]="currentPage === 1">
-            <button class="page-link" (click)="changePage(currentPage - 1)" [disabled]="currentPage === 1">
-              <i class="bi bi-chevron-left"></i>
-            </button>
-          </li>
-          <li class="page-item active">
-            <span class="page-link">Página {{ currentPage }} de {{ totalPages }}</span>
-          </li>
-          <li class="page-item" [class.disabled]="currentPage === totalPages">
-            <button class="page-link" (click)="changePage(currentPage + 1)" [disabled]="currentPage === totalPages">
-              <i class="bi bi-chevron-right"></i>
-            </button>
-          </li>
-        </ul>
-      </nav>
-    </div>
   </div>
 </div>

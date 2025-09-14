@@ -72,14 +72,11 @@ export class ImportacaoComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    console.log('OnInit chamado');
     this.loadCarteiras();
     this.loadCorretoras();
-    console.log('OnInit finalizado');
   }
 
   loadCarteiras(): void {
-    console.log('loadCarteiras chamado');
     this.isLoadingCarteiras = true;
 
     // Usando API real do backend
@@ -103,7 +100,6 @@ export class ImportacaoComponent implements OnInit, OnDestroy {
         }
       },
     });
-    console.log('loadCarteiras finalizado');
   }
 
   loadCorretoras(): void {
@@ -148,10 +144,8 @@ export class ImportacaoComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    console.log('ngOnDestroy chamado');
     this.destroy$.next();
     this.destroy$.complete();
-    console.log('ngOnDestroy finalizado');
   }
 
   // Ações de Carteira
