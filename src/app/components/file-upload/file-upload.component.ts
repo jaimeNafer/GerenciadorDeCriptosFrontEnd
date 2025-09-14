@@ -2,7 +2,7 @@ import { Component, EventEmitter, Input, Output, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ArquivoService } from '../../services/arquivo.service';
-import { Arquivo, StatusArquivo } from '../../models/arquivo.model';
+import { Arquivo, StatusArquivo, UploadArquivoRequest } from '../../models/arquivo.model';
 
 @Component({
   selector: 'app-file-upload',
@@ -74,68 +74,28 @@ export class FileUploadComponent {
     this.uploadProgress = 0;
   }
 
-  uploadFile(): void {
-    if (!this.selectedFile || !this.carteiraId || this.isUploading) {
+  selectFile(): void {
+    if (!this.selectedFile || !this.carteiraId) {
       return;
     }
 
-    this.isUploading = true;
-    this.uploadProgress = 0;
+    // Criar objeto arquivo para retornar
+    const arquivo: Arquivo = {
+      nome: this.selectedFile.name,
+      carteiraId: this.carteiraId!,
+      dataCriacao: new Date(),
+      tamanho: this.selectedFile.size,
+      status: StatusArquivo.PENDENTE,
+      observacoes: this.observacoes,
+      arquivoOriginal: this.selectedFile
+    };
 
-    // Simulação de upload para desenvolvimento
-    this.simulateUpload();
-
-    // Para usar API real, descomente:
-    // this.arquivoService.uploadArquivo(uploadRequest).subscribe({
-    //   next: (event) => {
-    //     if (event.status === 'progress') {
-    //       this.uploadProgress = event.message;
-    //     } else if (event.status === 'complete') {
-    //       const arquivo = event.body as Arquivo;
-    //       this.uploadComplete.emit(arquivo);
-    //       this.resetForm();
-    //     }
-    //   },
-    //   error: (error) => {
-    //     console.error('Erro no upload:', error);
-    //     this.isUploading = false;
-    //     this.validationErrors = ['Erro ao fazer upload do arquivo'];
-    //   }
-    // });
+    this.uploadComplete.emit(arquivo);
+    this.resetForm();
   }
 
-  private simulateUpload(): void {
-    const interval = setInterval(() => {
-      this.uploadProgress += 10;
-      
-      if (this.uploadProgress >= 100) {
-        clearInterval(interval);
-        
-        // Simular arquivo criado
-        const novoArquivo: Arquivo = {
-          id: Date.now(),
-          nome: this.selectedFile!.name,
-          carteiraId: this.carteiraId!,
-          dataUpload: new Date(),
-          tamanho: this.selectedFile!.size,
-          status: StatusArquivo.PENDENTE,
-          observacoes: this.observacoes.trim() || undefined
-        };
-        
-        setTimeout(() => {
-          this.uploadComplete.emit(novoArquivo);
-          this.resetForm();
-        }, 500);
-      }
-    }, 200);
-  }
 
   onCancelClick(): void {
-    if (this.isUploading) {
-      // Aqui você poderia cancelar o upload se a API suportasse
-      return;
-    }
-    
     this.resetForm();
     this.cancelled.emit();
   }
@@ -143,8 +103,6 @@ export class FileUploadComponent {
   private resetForm(): void {
     this.selectedFile = null;
     this.observacoes = '';
-    this.isUploading = false;
-    this.uploadProgress = 0;
     this.validationErrors = [];
     this.dragOver = false;
   }
@@ -159,7 +117,7 @@ export class FileUploadComponent {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   }
 
-  get canUpload(): boolean {
-    return !!(this.selectedFile && this.carteiraId && !this.isUploading && this.validationErrors.length === 0);
+  get canSelect(): boolean {
+    return !!(this.selectedFile && this.carteiraId && this.validationErrors.length === 0);
   }
 }

@@ -74,7 +74,7 @@ export class CarteiraFormComponent implements OnInit, OnChanges {
     if (this.carteira) {
       this.carteiraForm.patchValue({
         nome: this.carteira.nome,
-        corretoraId: this.carteira.corretoraId,
+        corretoraId: this.carteira.corretora?.idCorretora,
         excluido: this.carteira.excluido ?? false,
       });
     }
