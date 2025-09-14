@@ -97,26 +97,26 @@
     </div>
 
     <!-- KPIs compactos (sempre que houver dados) -->
-    <div class="kpis" *ngIf="!loading && historicoMensal">
-      <div class="row text-center g-2">
-        <div class="col-6 col-md-3 kpi">
-          <div class="value text-dark">{{ formatCurrency(historicoMensal.periodoTotal.totalGeral) }}</div>
-          <div class="label">Volume Total</div>
+    <div class="kpis" *ngIf="!loading && wrapper.length > 0">
+      <div class="row g-2">
+        <div class="col-6 col-md-3 kpi text-center">
+          <div class="value text-secondary">{{ getTotalOperacoes() }}</div>
+          <div class="label">Total Operações</div>
         </div>
-        <div class="col-6 col-md-3 kpi">
-          <div class="value" [class.text-success]="historicoMensal.periodoTotal.saldoGeral >= 0"
-               [class.text-danger]="historicoMensal.periodoTotal.saldoGeral < 0">
-            {{ formatCurrency(historicoMensal.periodoTotal.saldoGeral) }}
+        <div class="col-6 col-md-3 kpi text-center">
+          <div class="value text-dark">{{ formatCurrency(getTotalMovimentacoes()) }}</div>
+          <div class="label">Total Movimentações</div>
+        </div>
+        <div class="col-6 col-md-3 kpi text-center">
+          <div class="value text-secondary">{{ wrapper.length }}</div>
+          <div class="label">Meses</div>
+        </div>
+        <div class="col-6 col-md-3 kpi text-center">
+          <div class="value" [class.text-success]="getTotalLucroPrejuizo() >= 0"
+               [class.text-danger]="getTotalLucroPrejuizo() < 0">
+            {{ formatCurrency(getTotalLucroPrejuizo()) }}
           </div>
           <div class="label">Saldo Geral</div>
-        </div>
-        <div class="col-6 col-md-3 kpi">
-          <div class="value text-secondary">{{ formatDate(historicoMensal.periodoTotal.dataInicio) }}</div>
-          <div class="label">Data Início</div>
-        </div>
-        <div class="col-6 col-md-3 kpi">
-          <div class="value text-secondary">{{ formatDate(historicoMensal.periodoTotal.dataFim) }}</div>
-          <div class="label">Data Fim</div>
         </div>
       </div>
     </div>
@@ -124,60 +124,105 @@
     <div class="card-body p-0" *ngIf="!loading; else loadingTemplate">
       <div *ngIf="wrapper.length > 0; else emptyState">
 
-        <!-- Tabela -->
-        <div class="table-responsive">
-          <table class="table table-hover table-compact mb-0 align-middle">
-            <thead class="table-dark sticky-top">
-              <tr>
-                <th scope="col" class="py-2">Data</th>
-                <th scope="col" class="py-2">Operação</th>
-                <th scope="col" class="py-2">Moeda Entrada</th>
-                <th scope="col" class="py-2">Qtd Entrada</th>
-                <th scope="col" class="py-2">Moeda Saída</th>
-                <th scope="col" class="py-2">Qtd Saída</th>
-                <th scope="col" class="py-2">Valor (BRL)</th>
-                <th scope="col" class="py-2">Lucro/Prejuízo</th>
-              </tr>
-            </thead>
-            <tbody>
-              <ng-container *ngFor="let wrapper of wrapper; let i = index">
-                <!-- Linhas do mês -->
-                <tr *ngFor="let operacao of wrapper.operacoes" class="operation-row">
-                  <td class="py-1">
-                    <small class="text-body-secondary">{{ obterDataOperacao(operacao) }}</small>
-                  </td>
-                  <td class="py-1">
-                    <span class="badge badge-sm tipo-badge"
-                          [ngClass]="operacao.tipoOperacao.toLocaleLowerCase()">
-                      {{ operacao.tipoOperacao }}
-                    </span>
-                  </td>
-                  <td class="py-1">
-                    <div class="fw-medium small">{{ operacao.moedaEntrada?.ticker || "-" }}</div>
-                    <small class="text-body-secondary" *ngIf="operacao.moedaEntrada?.nome">{{ operacao.moedaEntrada?.nome }}</small>
-                  </td>
-                  <td class="py-1">
-                    <span class="font-monospace small">{{ formatCurrency(operacao.quantidadeEntrada) }}</span>
-                  </td>
-                  <td class="py-1">
-                    <div class="fw-medium small">{{ operacao.moedaSaida?.ticker || "-" }}</div>
-                    <small class="text-body-secondary" *ngIf="operacao.moedaSaida?.nome">{{ operacao.moedaSaida?.nome }}</small>
-                  </td>
-                  <td class="py-1">
-                    <span class="font-monospace small">{{ formatNumber(operacao.quantidadeSaida) }}</span> 
-                  </td>
-                  <td class="py-1">
-                    <strong class="font-monospace small">{{ formatCurrency(operacao.valorBrl) }}</strong>
-                  </td>
-                  <td class="py-1">
-                    <span [ngClass]="{'text-success': operacao.lucroPrejuizo >= 0, 'text-danger': operacao.lucroPrejuizo < 0}">
-                      {{ formatCurrency(operacao.lucroPrejuizo) }}
-                    </span>
-                  </td>
-                </tr>
-              </ng-container>
-            </tbody>
-          </table>
+        <!-- Accordions por mês -->
+        <div class="accordion" id="operacoesAccordion">
+          <div class="accordion-item" *ngFor="let mesWrapper of wrapper; let i = index">
+            <h2 class="accordion-header">
+              <button class="accordion-button" [class.collapsed]="i !== 0" type="button"
+                       [attr.data-bs-toggle]="'collapse'"
+                       [attr.data-bs-target]="'#collapse' + i"
+                       [attr.aria-expanded]="i === 0"
+                       [attr.aria-controls]="'collapse' + i">
+                 <div class="d-flex align-items-center w-100 me-3">
+                    <div class="d-flex flex-column" style="min-width: 150px;">
+                       <strong>{{ mesWrapper.mesAnoReferencia }}</strong>
+                       <small class="text-muted mt-1">{{ mesWrapper.operacoes.length }} operações</small>
+                     </div>
+                     <div class="d-flex align-items-center justify-content-start" style="min-width: 180px;">
+                       <span class="badge" 
+                             [class.bg-warning]="mesWrapper.consolidado?.deveDeclararIN1888"
+                             [class.bg-success]="!mesWrapper.consolidado?.deveDeclararIN1888"
+                             [class.text-dark]="mesWrapper.consolidado?.deveDeclararIN1888"
+                             style="font-size: 0.75rem; line-height: 1.2;">
+                         <i class="bi" [class.bi-exclamation-triangle]="mesWrapper.consolidado?.deveDeclararIN1888"
+                                       [class.bi-check-circle]="!mesWrapper.consolidado?.deveDeclararIN1888"></i>
+                         {{ mesWrapper.consolidado?.deveDeclararIN1888 ? 'Declarar IN1888' : 'Sem declaração' }}
+                       </span>
+                     </div>
+                     <div class="flex-grow-1"></div>
+                   <div class="d-flex gap-4 align-items-center">
+                      <div class="text-center">
+                        <div class="small text-muted mb-1">Movimentações</div>
+                        <div class="fw-bold">{{ formatCurrency(mesWrapper.consolidado?.valorTotalMovimentacoes || 0) }}</div>
+                      </div>
+                     <div class="text-center">
+                       <div class="small text-muted mb-1">Lucro/Prejuízo</div>
+                       <div class="fw-bold" [class.text-success]="(mesWrapper.consolidado?.valorTotalLucroPrejuizo || 0) >= 0"
+                            [class.text-danger]="(mesWrapper.consolidado?.valorTotalLucroPrejuizo || 0) < 0">
+                         {{ formatCurrency(mesWrapper.consolidado?.valorTotalLucroPrejuizo || 0) }}
+                       </div>
+                     </div>
+                   </div>
+                 </div>
+               </button>
+            </h2>
+            <div [id]="'collapse' + i" class="accordion-collapse collapse" [class.show]="i === 0"
+                 data-bs-parent="#operacoesAccordion">
+              <div class="accordion-body p-0">
+                <div class="table-responsive">
+                  <table class="table table-hover table-compact mb-0 align-middle">
+                    <thead class="table-light">
+                      <tr>
+                        <th scope="col" class="py-2">Data</th>
+                        <th scope="col" class="py-2">Operação</th>
+                        <th scope="col" class="py-2">Moeda Entrada</th>
+                        <th scope="col" class="py-2">Qtd Entrada</th>
+                        <th scope="col" class="py-2">Moeda Saída</th>
+                        <th scope="col" class="py-2">Qtd Saída</th>
+                        <th scope="col" class="py-2">Valor (BRL)</th>
+                        <th scope="col" class="py-2">Lucro/Prejuízo</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr *ngFor="let operacao of mesWrapper.operacoes" class="operation-row">
+                        <td class="py-1">
+                          <small class="text-body-secondary">{{ obterDataOperacao(operacao) }}</small>
+                        </td>
+                        <td class="py-1">
+                          <span class="badge badge-sm tipo-badge"
+                                [ngClass]="operacao.tipoOperacao.toLocaleLowerCase()">
+                            {{ operacao.tipoOperacao }}
+                          </span>
+                        </td>
+                        <td class="py-1">
+                          <div class="fw-medium small">{{ operacao.moedaEntrada?.ticker || "-" }}</div>
+                          <small class="text-body-secondary" *ngIf="operacao.moedaEntrada?.nome">{{ operacao.moedaEntrada?.nome }}</small>
+                        </td>
+                        <td class="py-1">
+                          <span class="font-monospace small">{{ formatCurrency(operacao.quantidadeEntrada) }}</span>
+                        </td>
+                        <td class="py-1">
+                          <div class="fw-medium small">{{ operacao.moedaSaida?.ticker || "-" }}</div>
+                          <small class="text-body-secondary" *ngIf="operacao.moedaSaida?.nome">{{ operacao.moedaSaida?.nome }}</small>
+                        </td>
+                        <td class="py-1">
+                          <span class="font-monospace small">{{ formatNumber(operacao.quantidadeSaida) }}</span> 
+                        </td>
+                        <td class="py-1">
+                          <strong class="font-monospace small">{{ formatCurrency(operacao.valorBrl) }}</strong>
+                        </td>
+                        <td class="py-1">
+                          <span [ngClass]="{'text-success': operacao.lucroPrejuizo >= 0, 'text-danger': operacao.lucroPrejuizo < 0}">
+                            {{ formatCurrency(operacao.lucroPrejuizo) }}
+                          </span>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 

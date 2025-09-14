@@ -116,4 +116,22 @@ export class OperacoesComponent implements OnInit {
       ? this.formatDate(operacao.dataOperacaoEntrada)
       : this.formatDate(operacao.dataOperacaoSaida || '');
   }
+
+  getTotalMovimentacoes(): number {
+    return this.wrapper.reduce((total, mesWrapper) => {
+      return total + (mesWrapper.consolidado?.valorTotalMovimentacoes || 0);
+    }, 0);
+  }
+
+  getTotalLucroPrejuizo(): number {
+    return this.wrapper.reduce((total, mesWrapper) => {
+      return total + (mesWrapper.consolidado?.valorTotalLucroPrejuizo || 0);
+    }, 0);
+  }
+
+  getTotalOperacoes(): number {
+    return this.wrapper.reduce((total, mesWrapper) => {
+      return total + (mesWrapper.operacoes?.length || 0);
+    }, 0);
+  }
 }
