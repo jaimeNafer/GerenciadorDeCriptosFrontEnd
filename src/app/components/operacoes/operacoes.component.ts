@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, OnInit } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule } from '@angular/forms';
 import { FormBuilder, FormGroup } from '@angular/forms';
@@ -49,12 +49,18 @@ export class OperacoesComponent implements OnInit {
   loadInitialData(): void {
     this.loading = true;
     this.mensagemErro = null;
-    this.carteiraService.getCarteiras().subscribe((carteiras) => {
-      this.carteiras = carteiras;
-      if (carteiras.length > 0) {
-        this.loadOperacoesByCarteira(carteiras[0].idCarteira!);
-      } else {
+    this.carteiraService.getCarteiras().subscribe({
+      next: (carteiras) => {
+        this.carteiras = carteiras;
+        if (carteiras.length > 0) {
+          this.loadOperacoesByCarteira(carteiras[0].idCarteira!);
+        } else {
+          this.loading = false;
+        }
+      },
+      error: () => {
         this.loading = false;
+        this.mensagemErro = 'Sistema indisponível. Tente novamente.';
       }
     });
   }
@@ -64,6 +70,7 @@ export class OperacoesComponent implements OnInit {
       next: (operacoesWrapper) => {
         this.wrapper = operacoesWrapper;
         this.loading = false;
+        this.mensagemErro = null;
       },
       error: () => {
         this.mensagemErro = 'Erro ao carregar operações';
