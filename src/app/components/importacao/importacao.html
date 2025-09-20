@@ -235,8 +235,8 @@
     [cancelButtonText]="'Cancelar'"
     [confirmButtonClass]="'btn-danger'"
     [isLoading]="isDeletingArquivo"
-    (onConfirm)="confirmarExclusaoArquivo()"
-    (onCancel)="fecharModalExclusaoArquivo()">
+    (confirmed)="confirmarExclusaoArquivo()"
+    (cancelled)="fecharModalExclusaoArquivo()">
   </app-confirmation-modal>
   
   </div> <!-- Fecha div do conteúdo principal -->

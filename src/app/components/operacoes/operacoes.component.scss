@@ -28,7 +28,11 @@
 .tipo-badge.staking      { background: rgba(111,66,193,.12); color: #6f42c1; }
 .tipo-badge.reward       { background: rgba(25,135,84,.12); color: #198754; }
 .tipo-badge.airdrop      { background: rgba(102,16,242,.12); color: #6610f2; }
-.tipo-badge.outros      { background: rgba(102,16,242,.12); color: rgb(0, 0, 0); }
+.tipo-badge.deposito     { background: rgba(25,135,84,.12); color: #198754; }
+.tipo-badge.saque        { background: rgba(255,133,27,.12); color: #ff851b; }
+.tipo-badge.saque_fiat   { background: rgba(255,133,27,.12); color: #ff851b; }
+.tipo-badge.transferencia { background: rgba(108,117,125,.12); color: #6c757d; }
+.tipo-badge.outros        { background: rgba(102,16,242,.12); color: rgb(0, 0, 0); }
 
 /* ícone grande sem inline style */
 .icon-xl { font-size: 2rem; }
